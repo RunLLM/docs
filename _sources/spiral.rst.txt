@@ -1,0 +1,191 @@
+spiral package
+==============
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   spiral.constants
+   spiral.integrations
+   spiral.tests
+
+Submodules
+----------
+
+spiral.api\_client module
+-------------------------
+
+.. automodule:: spiral.api_client
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.artifact module
+----------------------
+
+.. automodule:: spiral.artifact
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.check\_artifact module
+-----------------------------
+
+.. automodule:: spiral.check_artifact
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.dag module
+-----------------
+
+.. automodule:: spiral.dag
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.decorator module
+-----------------------
+
+.. automodule:: spiral.decorator
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.encoding module
+----------------------
+
+.. automodule:: spiral.encoding
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.enums module
+-------------------
+
+.. automodule:: spiral.enums
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.error module
+-------------------
+
+.. automodule:: spiral.error
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.flow module
+------------------
+
+.. automodule:: spiral.flow
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.generic\_artifact module
+-------------------------------
+
+.. automodule:: spiral.generic_artifact
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.github module
+--------------------
+
+.. automodule:: spiral.github
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.log module
+-----------------
+
+.. automodule:: spiral.log
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.logger module
+--------------------
+
+.. automodule:: spiral.logger
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.metric\_artifact module
+------------------------------
+
+.. automodule:: spiral.metric_artifact
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.operators module
+-----------------------
+
+.. automodule:: spiral.operators
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.responses module
+-----------------------
+
+.. automodule:: spiral.responses
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.schedule module
+----------------------
+
+.. automodule:: spiral.schedule
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.spiral\_client module
+----------------------------
+
+.. automodule:: spiral.spiral_client
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.table\_artifact module
+-----------------------------
+
+.. automodule:: spiral.table_artifact
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.templates module
+-----------------------
+
+.. automodule:: spiral.templates
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.utils module
+-------------------
+
+.. automodule:: spiral.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: spiral
+   :members:
+   :undoc-members:
+   :show-inheritance:

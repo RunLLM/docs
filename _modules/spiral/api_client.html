@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.api_client &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spiral.api_client</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.api_client</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span> <span class="nn">requests</span>
+
+<span class="kn">from</span> <span class="nn">spiral.dag</span> <span class="kn">import</span> <span class="n">DAG</span>
+<span class="kn">from</span> <span class="nn">spiral.enums</span> <span class="kn">import</span> <span class="n">OperatorType</span><span class="p">,</span> <span class="n">ExecutionStatus</span>
+<span class="kn">from</span> <span class="nn">spiral.error</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">NoConnectedIntegrationsException</span><span class="p">,</span>
+    <span class="n">SpiralError</span><span class="p">,</span>
+    <span class="n">InternalSpiralError</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">spiral</span> <span class="kn">import</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">spiral.operators</span> <span class="kn">import</span> <span class="n">Operator</span>
+<span class="kn">from</span> <span class="nn">spiral.integrations.integration</span> <span class="kn">import</span> <span class="n">IntegrationInfo</span>
+<span class="kn">from</span> <span class="nn">spiral.responses</span> <span class="kn">import</span> <span class="n">PreviewResponse</span><span class="p">,</span> <span class="n">RegisterWorkflowResponse</span>
+
+
+<span class="k">def</span> <span class="nf">_print_preview_logs</span><span class="p">(</span><span class="n">preview_resp</span><span class="p">:</span> <span class="n">PreviewResponse</span><span class="p">,</span> <span class="n">dag</span><span class="p">:</span> <span class="n">DAG</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Prints all the logs generated during preview, in BFS order.&quot;&quot;&quot;</span>
+    <span class="n">q</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Operator</span><span class="p">]</span> <span class="o">=</span> <span class="n">dag</span><span class="o">.</span><span class="n">list_root_operators</span><span class="p">()</span>
+    <span class="n">seen_op_ids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">q</span><span class="p">)</span>
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">curr_op</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">curr_op</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">preview_resp</span><span class="o">.</span><span class="n">operator_results</span><span class="p">:</span>
+            <span class="n">curr_op_result</span> <span class="o">=</span> <span class="n">preview_resp</span><span class="o">.</span><span class="n">operator_results</span><span class="p">[</span><span class="n">curr_op</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">curr_op_result</span><span class="o">.</span><span class="n">logs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">curr_op_result</span><span class="o">.</span><span class="n">logs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Operator &quot;</span><span class="si">%s</span><span class="s1">&quot; Logs:&#39;</span> <span class="o">%</span> <span class="n">curr_op</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">curr_op_result</span><span class="o">.</span><span class="n">logs</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">curr_op_result</span><span class="o">.</span><span class="n">err_msg</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">curr_op_result</span><span class="o">.</span><span class="n">err_msg</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Operator </span><span class="si">%s</span><span class="s2"> Failed! </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">curr_op</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">curr_op_result</span><span class="o">.</span><span class="n">err_msg</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Continue traversing, marking operators added to the queue as &quot;seen&quot;</span>
+                <span class="k">for</span> <span class="n">output_artifact_id</span> <span class="ow">in</span> <span class="n">curr_op</span><span class="o">.</span><span class="n">outputs</span><span class="p">:</span>
+                    <span class="n">next_operators</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="n">op</span>
+                        <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">dag</span><span class="o">.</span><span class="n">list_operators</span><span class="p">(</span><span class="n">on_artifact_id</span><span class="o">=</span><span class="n">output_artifact_id</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">op</span><span class="o">.</span><span class="n">id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen_op_ids</span>
+                    <span class="p">]</span>
+                    <span class="n">q</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">next_operators</span><span class="p">)</span>
+                    <span class="n">seen_op_ids</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">next_operators</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="APIClient"><a class="viewcode-back" href="../../spiral.html#spiral.api_client.APIClient">[docs]</a><span class="k">class</span> <span class="nc">APIClient</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Internal client class used to send requests to the spiral cluster.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">PREVIEW_ROUTE</span> <span class="o">=</span> <span class="s2">&quot;/preview&quot;</span>
+    <span class="n">REGISTER_WORKFLOW_ROUTE</span> <span class="o">=</span> <span class="s2">&quot;/workflow/register&quot;</span>
+    <span class="n">LIST_INTEGRATIONS_ROUTE</span> <span class="o">=</span> <span class="s2">&quot;/integrations&quot;</span>
+    <span class="n">LIST_TABLES_ROUTE</span> <span class="o">=</span> <span class="s2">&quot;/tables&quot;</span>
+    <span class="n">GET_WORKFLOW_ROUTE_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;/workflow/</span><span class="si">%s</span><span class="s2">&quot;</span>
+    <span class="n">DELETE_WORKFLOW_ROUTE_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;/workflow/</span><span class="si">%s</span><span class="s2">/delete&quot;</span>
+    <span class="n">LIST_GITHUB_REPO_ROUTE</span> <span class="o">=</span> <span class="s2">&quot;/integrations/github/repos&quot;</span>
+    <span class="n">LIST_GITHUB_BRANCH_ROUTE</span> <span class="o">=</span> <span class="s2">&quot;/integrations/github/branches&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">spiral_address</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">use_https</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">email</span> <span class="o">=</span> <span class="n">email</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span> <span class="o">=</span> <span class="n">api_key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spiral_address</span> <span class="o">=</span> <span class="n">spiral_address</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_https</span> <span class="o">=</span> <span class="n">use_https</span>
+
+    <span class="k">def</span> <span class="nf">_construct_full_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">route_suffix</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">protocol</span> <span class="o">=</span> <span class="s2">&quot;https&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_https</span> <span class="k">else</span> <span class="s2">&quot;http&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">://</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">protocol</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spiral_address</span><span class="p">,</span> <span class="n">route_suffix</span><span class="p">)</span>
+
+<div class="viewcode-block" id="APIClient.list_integrations"><a class="viewcode-back" href="../../spiral.html#spiral.api_client.APIClient.list_integrations">[docs]</a>    <span class="k">def</span> <span class="nf">list_integrations</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">IntegrationInfo</span><span class="p">]:</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_construct_full_url</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">LIST_INTEGRATIONS_ROUTE</span><span class="p">)</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">generate_auth_headers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">email</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="p">)</span>
+
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">raise_errors</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">())</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NoConnectedIntegrationsException</span><span class="p">(</span>
+                <span class="s2">&quot;Unable to create flow. Must be connected to at least one integration!&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">integration_info</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]:</span> <span class="n">IntegrationInfo</span><span class="p">(</span><span class="o">**</span><span class="n">integration_info</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">integration_info</span> <span class="ow">in</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="APIClient.list_github_repos"><a class="viewcode-back" href="../../spiral.html#spiral.api_client.APIClient.list_github_repos">[docs]</a>    <span class="k">def</span> <span class="nf">list_github_repos</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_construct_full_url</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">LIST_GITHUB_REPO_ROUTE</span><span class="p">)</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">generate_auth_headers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">email</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="p">)</span>
+
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">&quot;repos&quot;</span><span class="p">]]</span></div>
+
+<div class="viewcode-block" id="APIClient.list_github_branches"><a class="viewcode-back" href="../../spiral.html#spiral.api_client.APIClient.list_github_branches">[docs]</a>    <span class="k">def</span> <span class="nf">list_github_branches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repo_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_construct_full_url</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">LIST_GITHUB_BRANCH_ROUTE</span><span class="p">)</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">generate_auth_headers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">email</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="p">)</span>
+        <span class="n">headers</span><span class="p">[</span><span class="s2">&quot;github-repo&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">repo_url</span>
+
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">&quot;branches&quot;</span><span class="p">]]</span></div>
+
+<div class="viewcode-block" id="APIClient.list_tables"><a class="viewcode-back" href="../../spiral.html#spiral.api_client.APIClient.list_tables">[docs]</a>    <span class="k">def</span> <span class="nf">list_tables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_construct_full_url</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">LIST_TABLES_ROUTE</span><span class="p">)</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">generate_auth_headers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">email</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="p">)</span>
+        <span class="n">headers</span><span class="p">[</span><span class="s2">&quot;limit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">raise_errors</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">[(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;owner&quot;</span><span class="p">])</span> <span class="k">for</span> <span class="n">table</span> <span class="ow">in</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">&quot;tables&quot;</span><span class="p">]]</span></div>
+
+<div class="viewcode-block" id="APIClient.preview"><a class="viewcode-back" href="../../spiral.html#spiral.api_client.APIClient.preview">[docs]</a>    <span class="k">def</span> <span class="nf">preview</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dag</span><span class="p">:</span> <span class="n">DAG</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PreviewResponse</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Makes a request against the /preview endpoint.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dag:</span>
+<span class="sd">                The DAG object to be serialized into the request header. Preview will</span>
+<span class="sd">                execute this entire DAG object.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A PreviewResponse object, parsed from the preview endpoint&#39;s response.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">utils</span><span class="o">.</span><span class="n">generate_auth_headers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">email</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="n">body</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;dag&quot;</span><span class="p">:</span> <span class="n">dag</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="p">}</span>
+
+        <span class="n">files</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">dag</span><span class="o">.</span><span class="n">list_operators</span><span class="p">():</span>
+                <span class="n">file_path</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">file_path</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">file_path</span><span class="p">:</span>
+                    <span class="n">files</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">id</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span>
+
+            <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_construct_full_url</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PREVIEW_ROUTE</span><span class="p">)</span>
+            <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">files</span><span class="o">=</span><span class="n">files</span><span class="p">)</span>
+            <span class="n">utils</span><span class="o">.</span><span class="n">raise_errors</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
+
+            <span class="n">preview_resp</span> <span class="o">=</span> <span class="n">PreviewResponse</span><span class="p">(</span><span class="o">**</span><span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">())</span>
+            <span class="n">_print_preview_logs</span><span class="p">(</span><span class="n">preview_resp</span><span class="p">,</span> <span class="n">dag</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">preview_resp</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">ExecutionStatus</span><span class="o">.</span><span class="n">PENDING</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InternalSpiralError</span><span class="p">(</span><span class="s2">&quot;Preview route should not be returning PENDING status.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">preview_resp</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">ExecutionStatus</span><span class="o">.</span><span class="n">FAILED</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">SpiralError</span><span class="p">(</span><span class="s2">&quot;Preview execution failed.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">preview_resp</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">file_obj</span> <span class="ow">in</span> <span class="n">files</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">file_obj</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="APIClient.register_workflow"><a class="viewcode-back" href="../../spiral.html#spiral.api_client.APIClient.register_workflow">[docs]</a>    <span class="k">def</span> <span class="nf">register_workflow</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dag</span><span class="p">:</span> <span class="n">DAG</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RegisterWorkflowResponse</span><span class="p">:</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">utils</span><span class="o">.</span><span class="n">generate_auth_headers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">email</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="n">body</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;dag&quot;</span><span class="p">:</span> <span class="n">dag</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="p">}</span>
+
+        <span class="n">files</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">dag</span><span class="o">.</span><span class="n">list_operators</span><span class="p">():</span>
+                <span class="n">file_path</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">file_path</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">file_path</span><span class="p">:</span>
+                    <span class="n">files</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">id</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span>
+
+            <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_construct_full_url</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">REGISTER_WORKFLOW_ROUTE</span><span class="p">)</span>
+            <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">files</span><span class="o">=</span><span class="n">files</span><span class="p">)</span>
+            <span class="n">utils</span><span class="o">.</span><span class="n">raise_errors</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">RegisterWorkflowResponse</span><span class="p">(</span><span class="o">**</span><span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">())</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">file_obj</span> <span class="ow">in</span> <span class="n">files</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">file_obj</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="APIClient.delete_workflow"><a class="viewcode-back" href="../../spiral.html#spiral.api_client.APIClient.delete_workflow">[docs]</a>    <span class="k">def</span> <span class="nf">delete_workflow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">generate_auth_headers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">email</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="p">)</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_construct_full_url</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DELETE_WORKFLOW_ROUTE_TEMPLATE</span> <span class="o">%</span> <span class="n">flow_id</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">raise_errors</span><span class="p">(</span><span class="n">response</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="APIClient.get_workflow"><a class="viewcode-back" href="../../spiral.html#spiral.api_client.APIClient.get_workflow">[docs]</a>    <span class="k">def</span> <span class="nf">get_workflow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">generate_auth_headers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">email</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="p">)</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_construct_full_url</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GET_WORKFLOW_ROUTE_TEMPLATE</span> <span class="o">%</span> <span class="n">flow_id</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">raise_errors</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

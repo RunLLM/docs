@@ -1,0 +1,61 @@
+spiral.tests package
+====================
+
+Submodules
+----------
+
+spiral.tests.dag\_delta\_test module
+------------------------------------
+
+.. automodule:: spiral.tests.dag_delta_test
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.tests.dag\_test module
+-----------------------------
+
+.. automodule:: spiral.tests.dag_test
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.tests.decorator\_test module
+-----------------------------------
+
+.. automodule:: spiral.tests.decorator_test
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.tests.metric\_test module
+--------------------------------
+
+.. automodule:: spiral.tests.metric_test
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.tests.serialization\_test module
+---------------------------------------
+
+.. automodule:: spiral.tests.serialization_test
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.tests.utils module
+-------------------------
+
+.. automodule:: spiral.tests.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: spiral.tests
+   :members:
+   :undoc-members:
+   :show-inheritance:

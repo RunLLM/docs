@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.responses &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spiral.responses</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.responses</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+
+<span class="kn">from</span> <span class="nn">spiral.enums</span> <span class="kn">import</span> <span class="n">ExecutionStatus</span>
+
+
+<div class="viewcode-block" id="UnitTestResult"><a class="viewcode-back" href="../../spiral.html#spiral.responses.UnitTestResult">[docs]</a><span class="k">class</span> <span class="nc">UnitTestResult</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This represents the results of a single unit test.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        check_passed:</span>
+<span class="sd">            Whether the unit test has passed the constraints check.</span>
+<span class="sd">        num_row_violations:</span>
+<span class="sd">            The number of rows that violated the unit test. This is only</span>
+<span class="sd">            set if the unit test returns a pandas.Series(bool).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">check_passed</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">num_row_violations</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="OperatorResult"><a class="viewcode-back" href="../../spiral.html#spiral.responses.OperatorResult">[docs]</a><span class="k">class</span> <span class="nc">OperatorResult</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This represents the results of a single operator run.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        logs:</span>
+<span class="sd">            The dictionary generated by this operator.</span>
+<span class="sd">        err_msg:</span>
+<span class="sd">            The error message if the operator fails.</span>
+<span class="sd">            Empty if the operator ran successfully.</span>
+<span class="sd">        test_result:</span>
+<span class="sd">            Only set if this operator represents a unit test on an artifact.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">logs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span>
+    <span class="n">err_msg</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">test_result</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">UnitTestResult</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="TableArtifactResult"><a class="viewcode-back" href="../../spiral.html#spiral.responses.TableArtifactResult">[docs]</a><span class="k">class</span> <span class="nc">TableArtifactResult</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This represents the results of a single table artifact.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        table_schema:</span>
+<span class="sd">            A list of maps, which each map representing the name -&gt; type</span>
+<span class="sd">            of a single column.</span>
+
+<span class="sd">        data:</span>
+<span class="sd">            A byte string that can be deserialized into a Pandas dataframe.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">table_schema</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span>
+    <span class="n">data</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+<div class="viewcode-block" id="MetricArtifactResult"><a class="viewcode-back" href="../../spiral.html#spiral.responses.MetricArtifactResult">[docs]</a><span class="k">class</span> <span class="nc">MetricArtifactResult</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">val</span><span class="p">:</span> <span class="nb">float</span></div>
+
+
+<div class="viewcode-block" id="ArtifactResult"><a class="viewcode-back" href="../../spiral.html#spiral.responses.ArtifactResult">[docs]</a><span class="k">class</span> <span class="nc">ArtifactResult</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">table</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TableArtifactResult</span><span class="p">]</span>
+    <span class="n">metric</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">MetricArtifactResult</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="PreviewResponse"><a class="viewcode-back" href="../../spiral.html#spiral.responses.PreviewResponse">[docs]</a><span class="k">class</span> <span class="nc">PreviewResponse</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This is the response object returned by api_client.preview().</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        status:</span>
+<span class="sd">            The execution state of preview.</span>
+<span class="sd">        operator_results:</span>
+<span class="sd">            A map from an operator id to its OperatorResult object.</span>
+<span class="sd">            All operators that were run will appear in this map.</span>
+
+<span class="sd">        artifact_results:</span>
+<span class="sd">            A map from an artifact id to its ArtifactResult object.</span>
+<span class="sd">            ArtifactResults will only appear in this map if explicitly</span>
+<span class="sd">            specified in the `target_ids` on the request.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">status</span><span class="p">:</span> <span class="n">ExecutionStatus</span>
+    <span class="n">operator_results</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">,</span> <span class="n">OperatorResult</span><span class="p">]</span>
+    <span class="n">artifact_results</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">,</span> <span class="n">ArtifactResult</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="RegisterWorkflowResponse"><a class="viewcode-back" href="../../spiral.html#spiral.responses.RegisterWorkflowResponse">[docs]</a><span class="k">class</span> <span class="nc">RegisterWorkflowResponse</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The is the response object returned by api_client.register_workflow().</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id:</span>
+<span class="sd">            The uuid if of the newly registered workflow.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

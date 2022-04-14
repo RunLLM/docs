@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.error &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spiral.error</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.error</h1><div class="highlight"><pre>
+<div class="viewcode-block" id="Error"><a class="viewcode-back" href="../../spiral.html#spiral.error.Error">[docs]</a><span></span><span class="k">class</span> <span class="nc">Error</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Exception raised for different kinds of errors.</span>
+<span class="sd">        Attributes:</span>
+<span class="sd">                message: explanation of the error</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span></div>
+
+
+<span class="c1"># Exception raised for errors occured when certain inputs are missing or contain</span>
+<span class="c1"># invalid values. Also thrown on any errors in the user&#39;s queries or function code.</span>
+<div class="viewcode-block" id="InvalidRequestError"><a class="viewcode-back" href="../../spiral.html#spiral.error.InvalidRequestError">[docs]</a><span class="k">class</span> <span class="nc">InvalidRequestError</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised for errors occured when the Spiral system fails to process</span>
+<span class="c1"># certain inputs.</span>
+<div class="viewcode-block" id="UnprocessableEntityError"><a class="viewcode-back" href="../../spiral.html#spiral.error.UnprocessableEntityError">[docs]</a><span class="k">class</span> <span class="nc">UnprocessableEntityError</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when an internal error occured within the Spiral system.</span>
+<div class="viewcode-block" id="InternalServerError"><a class="viewcode-back" href="../../spiral.html#spiral.error.InternalServerError">[docs]</a><span class="k">class</span> <span class="nc">InternalServerError</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;An internal server error occured when processing the &quot;</span>
+            <span class="s2">&quot;request. This is likely not your fault. Please contact &quot;</span>
+            <span class="s2">&quot;us at support@spiralai.co with your Spiral account &quot;</span>
+            <span class="s2">&quot;email and a brief description of what you were trying to &quot;</span>
+            <span class="s2">&quot;do when the error occurred, so that we can further &quot;</span>
+            <span class="s2">&quot;assist you. Apologies for the inconvenience!&quot;</span>
+        <span class="p">)</span></div>
+
+
+<span class="c1"># Exception raised when the requested resource is not found.</span>
+<div class="viewcode-block" id="ResourceNotFoundError"><a class="viewcode-back" href="../../spiral.html#spiral.error.ResourceNotFoundError">[docs]</a><span class="k">class</span> <span class="nc">ResourceNotFoundError</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when the requested metadata field is invalid.</span>
+<div class="viewcode-block" id="InvalidMetadataError"><a class="viewcode-back" href="../../spiral.html#spiral.error.InvalidMetadataError">[docs]</a><span class="k">class</span> <span class="nc">InvalidMetadataError</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># A catch-all exception raised for all other errors.</span>
+<div class="viewcode-block" id="SpiralError"><a class="viewcode-back" href="../../spiral.html#spiral.error.SpiralError">[docs]</a><span class="k">class</span> <span class="nc">SpiralError</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># An exception that indicates something is wrong within the system, not the user.</span>
+<div class="viewcode-block" id="InternalSpiralError"><a class="viewcode-back" href="../../spiral.html#spiral.error.InternalSpiralError">[docs]</a><span class="k">class</span> <span class="nc">InternalSpiralError</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">BELOW: Errors that are raised by the Python SDK code, not the backend.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="c1"># Exception raised when trying to create flow without connecting to integration</span>
+<div class="viewcode-block" id="NoConnectedIntegrationsException"><a class="viewcode-back" href="../../spiral.html#spiral.error.NoConnectedIntegrationsException">[docs]</a><span class="k">class</span> <span class="nc">NoConnectedIntegrationsException</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when referencing an integration that doesn&#39;t exist or the wrong</span>
+<span class="c1"># integration type.</span>
+<div class="viewcode-block" id="InvalidIntegrationException"><a class="viewcode-back" href="../../spiral.html#spiral.error.InvalidIntegrationException">[docs]</a><span class="k">class</span> <span class="nc">InvalidIntegrationException</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when checking a flow that doesn&#39;t write to any destination store.</span>
+<div class="viewcode-block" id="NoDestinationIntegrationException"><a class="viewcode-back" href="../../spiral.html#spiral.error.NoDestinationIntegrationException">[docs]</a><span class="k">class</span> <span class="nc">NoDestinationIntegrationException</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when the user misconfigures something when running a function.</span>
+<div class="viewcode-block" id="InvalidFunctionException"><a class="viewcode-back" href="../../spiral.html#spiral.error.InvalidFunctionException">[docs]</a><span class="k">class</span> <span class="nc">InvalidFunctionException</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when using invalid cron string</span>
+<div class="viewcode-block" id="InvalidCronStringException"><a class="viewcode-back" href="../../spiral.html#spiral.error.InvalidCronStringException">[docs]</a><span class="k">class</span> <span class="nc">InvalidCronStringException</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when the flow&#39;s graph is incomplete and not yet ready to be</span>
+<span class="c1"># published.</span>
+<div class="viewcode-block" id="IncompleteFlowException"><a class="viewcode-back" href="../../spiral.html#spiral.error.IncompleteFlowException">[docs]</a><span class="k">class</span> <span class="nc">IncompleteFlowException</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when an inappropriate user action is attempted.</span>
+<div class="viewcode-block" id="InvalidUserActionException"><a class="viewcode-back" href="../../spiral.html#spiral.error.InvalidUserActionException">[docs]</a><span class="k">class</span> <span class="nc">InvalidUserActionException</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when a validation fails that would fail the entire flow.</span>
+<div class="viewcode-block" id="BlockingValidationFailedException"><a class="viewcode-back" href="../../spiral.html#spiral.error.BlockingValidationFailedException">[docs]</a><span class="k">class</span> <span class="nc">BlockingValidationFailedException</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when user tries to reference a validation that doesn&#39;t exist</span>
+<div class="viewcode-block" id="ValidationDoesNotExistException"><a class="viewcode-back" href="../../spiral.html#spiral.error.ValidationDoesNotExistException">[docs]</a><span class="k">class</span> <span class="nc">ValidationDoesNotExistException</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when user attempts to use an invalid file name as a file dependency.</span>
+<div class="viewcode-block" id="ReservedFileNameException"><a class="viewcode-back" href="../../spiral.html#spiral.error.ReservedFileNameException">[docs]</a><span class="k">class</span> <span class="nc">ReservedFileNameException</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="ArtifactNotFoundException"><a class="viewcode-back" href="../../spiral.html#spiral.error.ArtifactNotFoundException">[docs]</a><span class="k">class</span> <span class="nc">ArtifactNotFoundException</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when user tries to use a file defined outside of provided function</span>
+<span class="c1"># directory as a dependency.</span>
+<div class="viewcode-block" id="InvalidDependencyFilePath"><a class="viewcode-back" href="../../spiral.html#spiral.error.InvalidDependencyFilePath">[docs]</a><span class="k">class</span> <span class="nc">InvalidDependencyFilePath</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># Exception raised when a github query is not valid.</span>
+<div class="viewcode-block" id="InvalidGithubQueryError"><a class="viewcode-back" href="../../spiral.html#spiral.error.InvalidGithubQueryError">[docs]</a><span class="k">class</span> <span class="nc">InvalidGithubQueryError</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

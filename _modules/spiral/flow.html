@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.flow &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spiral.flow</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.flow</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span>
+
+<span class="kn">from</span> <span class="nn">spiral.integrations.integration</span> <span class="kn">import</span> <span class="n">IntegrationInfo</span>
+
+<span class="kn">from</span> <span class="nn">spiral.api_client</span> <span class="kn">import</span> <span class="n">APIClient</span>
+<span class="kn">from</span> <span class="nn">spiral.dag</span> <span class="kn">import</span> <span class="n">DAG</span><span class="p">,</span> <span class="n">apply_deltas_to_dag</span><span class="p">,</span> <span class="n">SubgraphDAGDelta</span>
+<span class="kn">from</span> <span class="nn">spiral.enums</span> <span class="kn">import</span> <span class="n">OperatorType</span><span class="p">,</span> <span class="n">ValidationLevel</span>
+<span class="kn">from</span> <span class="nn">spiral.error</span> <span class="kn">import</span> <span class="n">BlockingValidationFailedException</span>
+<span class="kn">from</span> <span class="nn">spiral.table_artifact</span> <span class="kn">import</span> <span class="n">TableArtifact</span>
+<span class="kn">from</span> <span class="nn">spiral.utils</span> <span class="kn">import</span> <span class="n">schedule_from_cron_string</span>
+
+
+<div class="viewcode-block" id="Flow"><a class="viewcode-back" href="../../spiral.html#spiral.flow.Flow">[docs]</a><span class="k">class</span> <span class="nc">Flow</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This class allows users to interact with a single flow object.</span>
+
+<span class="sd">    Can only be initialized from `SpiralClient.create_flow()`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">api_client</span><span class="p">:</span> <span class="n">APIClient</span><span class="p">,</span>
+        <span class="n">connected_integrations</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">IntegrationInfo</span><span class="p">],</span>
+        <span class="n">dag</span><span class="p">:</span> <span class="n">DAG</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span> <span class="o">=</span> <span class="n">api_client</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connected_integrations</span> <span class="o">=</span> <span class="n">connected_integrations</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span> <span class="o">=</span> <span class="n">dag</span>
+
+<div class="viewcode-block" id="Flow.set_name"><a class="viewcode-back" href="../../spiral.html#spiral.flow.Flow.set_name">[docs]</a>    <span class="k">def</span> <span class="nf">set_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Rename the flow.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span></div>
+
+<div class="viewcode-block" id="Flow.set_description"><a class="viewcode-back" href="../../spiral.html#spiral.flow.Flow.set_description">[docs]</a>    <span class="k">def</span> <span class="nf">set_description</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Set a new description for this flow.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">description</span></div>
+
+<div class="viewcode-block" id="Flow.set_schedule"><a class="viewcode-back" href="../../spiral.html#spiral.flow.Flow.set_schedule">[docs]</a>    <span class="k">def</span> <span class="nf">set_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">schedule</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Set a new schedule for this flow.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            schedule: A cron expression specifying the cadence that this flow</span>
+<span class="sd">                will run on. If empty, the flow will only execute manually.</span>
+
+<span class="sd">                Eg. to run at the top of every hour:</span>
+<span class="sd">                schedule = &quot;0 * * * *&quot; or</span>
+<span class="sd">                schedule = spiral.hourly(minute: 0)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">schedule</span> <span class="o">=</span> <span class="n">schedule_from_cron_string</span><span class="p">(</span><span class="n">schedule</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Flow.test"><a class="viewcode-back" href="../../spiral.html#spiral.flow.Flow.test">[docs]</a>    <span class="k">def</span> <span class="nf">test</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Validates that the flow is ready to be published.</span>
+
+<span class="sd">        This method must be called before a flow is allowed to be published. It</span>
+<span class="sd">        can either be called explicitly or implicitly by `Flow.publish()`. It</span>
+<span class="sd">        performs practice run of the entire flow, without storing any results.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            BlockingValidationFailedException:</span>
+<span class="sd">                An error occurred because a validation of sufficiently high</span>
+<span class="sd">                severity failed during the practice run, which would result</span>
+<span class="sd">                in the entire flow failing.</span>
+<span class="sd">            IncompleteFlowException:</span>
+<span class="sd">                An error occurred because the flow is missing some required</span>
+<span class="sd">                fields or operators.</span>
+<span class="sd">            InvalidRequestError:</span>
+<span class="sd">                An error occurred when running the user&#39;s SQL queries or</span>
+<span class="sd">                function code.</span>
+<span class="sd">            InternalServerError:</span>
+<span class="sd">                An unexpected error occurred within the Spiral cluster.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">validation_ops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">list_operators</span><span class="p">(</span><span class="n">filter_to</span><span class="o">=</span><span class="p">[</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">VALIDATION</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">validation_ops</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">op</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">validation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">validation_op</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">validation</span>
+                <span class="k">if</span> <span class="n">validation_op</span><span class="o">.</span><span class="n">test_result</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">validation_op</span><span class="o">.</span><span class="n">test_result</span><span class="o">.</span><span class="n">check_passed</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">validation_op</span><span class="o">.</span><span class="n">level</span> <span class="o">==</span> <span class="n">ValidationLevel</span><span class="o">.</span><span class="n">ERROR</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">BlockingValidationFailedException</span><span class="p">(</span><span class="s2">&quot;Failed Validation: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">op</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning, failing validation: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">op</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="c1"># Preview the DAG, excluding any loads and validations.</span>
+        <span class="n">target_operators</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">list_operators</span><span class="p">(</span>
+            <span class="n">filter_to</span><span class="o">=</span><span class="p">[</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">EXTRACT</span><span class="p">,</span> <span class="n">OperatorType</span><span class="o">.</span><span class="n">FUNCTION</span><span class="p">,</span> <span class="n">OperatorType</span><span class="o">.</span><span class="n">METRIC</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">target_artifact_ids</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">target_operators</span><span class="p">:</span>
+            <span class="n">target_artifact_ids</span> <span class="o">+=</span> <span class="n">op</span><span class="o">.</span><span class="n">outputs</span>
+
+        <span class="n">dag_to_preview</span> <span class="o">=</span> <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span>
+            <span class="n">deltas</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">SubgraphDAGDelta</span><span class="p">(</span>
+                    <span class="n">artifact_ids</span><span class="o">=</span><span class="n">target_artifact_ids</span><span class="p">,</span>
+                    <span class="n">include_validation_operators</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">],</span>
+            <span class="n">make_copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="o">.</span><span class="n">preview</span><span class="p">(</span><span class="n">dag_to_preview</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">validated</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="Flow.publish"><a class="viewcode-back" href="../../spiral.html#spiral.flow.Flow.publish">[docs]</a>    <span class="k">def</span> <span class="nf">publish</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Uploads this flow object into the Spiral cluster, thereby productionizing it.</span>
+
+<span class="sd">        This method will perform a practice run of the entire flow before</span>
+<span class="sd">        uploading it, unless the flow has already been validated explicitly</span>
+<span class="sd">        by `Flow.test()`.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            BlockingValidationFailedException:</span>
+<span class="sd">                An error occurred because a validation of sufficiently high</span>
+<span class="sd">                severity failed during the practice run, which would result</span>
+<span class="sd">                in the entire flow failing.</span>
+<span class="sd">            InvalidRequestError:</span>
+<span class="sd">                An error occurred when practice running the user&#39;s SQL queries</span>
+<span class="sd">                or function code.</span>
+<span class="sd">            InternalServerError:</span>
+<span class="sd">                An unexpected error occurred within the Spiral cluster.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The newly created workflow&#39;s id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">validated</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">test</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="o">.</span><span class="n">register_workflow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">)</span><span class="o">.</span><span class="n">id</span></div>
+
+<div class="viewcode-block" id="Flow.describe"><a class="viewcode-back" href="../../spiral.html#spiral.flow.Flow.describe">[docs]</a>    <span class="k">def</span> <span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Prints out a human-readable description of the flow.&quot;&quot;&quot;</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;==================== FLOW =================================&quot;</span><span class="p">)</span>
+        <span class="n">readable_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;Flow Name: &quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;Flow Description: &quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="s2">&quot;Connected Integrations&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="n">integration</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="s2">&quot;Validated&quot;</span><span class="p">:</span> <span class="n">integration</span><span class="o">.</span><span class="n">validated</span><span class="p">,</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">integration</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connected_integrations</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+            <span class="p">],</span>
+        <span class="p">}</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">readable_dict</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+
+        <span class="n">artifacts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">list_artifacts</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">artifact</span> <span class="ow">in</span> <span class="n">artifacts</span><span class="p">:</span>
+            <span class="n">TableArtifact</span><span class="p">(</span>
+                <span class="n">api_client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="p">,</span> <span class="n">dag</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span> <span class="n">artifact_id</span><span class="o">=</span><span class="n">artifact</span><span class="o">.</span><span class="n">id</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

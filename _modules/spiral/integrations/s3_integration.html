@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.integrations.s3_integration &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>spiral.integrations.s3_integration</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.integrations.s3_integration</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="kn">from</span> <span class="nn">spiral.api_client</span> <span class="kn">import</span> <span class="n">APIClient</span>
+<span class="kn">from</span> <span class="nn">spiral.artifact</span> <span class="kn">import</span> <span class="n">Artifact</span><span class="p">,</span> <span class="n">ArtifactSpec</span>
+<span class="kn">from</span> <span class="nn">spiral.dag</span> <span class="kn">import</span> <span class="n">DAG</span><span class="p">,</span> <span class="n">apply_deltas_to_dag</span><span class="p">,</span> <span class="n">AddOrReplaceOperatorDelta</span>
+<span class="kn">from</span> <span class="nn">spiral.enums</span> <span class="kn">import</span> <span class="n">S3FileFormat</span>
+<span class="kn">from</span> <span class="nn">spiral.integrations.integration</span> <span class="kn">import</span> <span class="n">IntegrationInfo</span><span class="p">,</span> <span class="n">Integration</span>
+<span class="kn">from</span> <span class="nn">spiral.operators</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Operator</span><span class="p">,</span>
+    <span class="n">OperatorSpec</span><span class="p">,</span>
+    <span class="n">ExtractSpec</span><span class="p">,</span>
+    <span class="n">S3ExtractParams</span><span class="p">,</span>
+    <span class="n">S3LoadParams</span><span class="p">,</span>
+    <span class="n">SaveConfig</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">spiral.table_artifact</span> <span class="kn">import</span> <span class="n">TableArtifact</span>
+<span class="kn">from</span> <span class="nn">spiral.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">generate_uuid</span><span class="p">,</span>
+    <span class="n">artifact_name_from_op_name</span><span class="p">,</span>
+    <span class="n">generate_extract_op_name</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="S3Integration"><a class="viewcode-back" href="../../../spiral.integrations.html#spiral.integrations.s3_integration.S3Integration">[docs]</a><span class="k">class</span> <span class="nc">S3Integration</span><span class="p">(</span><span class="n">Integration</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class for S3 integration.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">api_client</span><span class="p">:</span> <span class="n">APIClient</span><span class="p">,</span> <span class="n">dag</span><span class="p">:</span> <span class="n">DAG</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="n">IntegrationInfo</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span> <span class="o">=</span> <span class="n">api_client</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span> <span class="o">=</span> <span class="n">dag</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span> <span class="o">=</span> <span class="n">metadata</span>
+
+<div class="viewcode-block" id="S3Integration.file"><a class="viewcode-back" href="../../../spiral.integrations.html#spiral.integrations.s3_integration.S3Integration.file">[docs]</a>    <span class="k">def</span> <span class="nf">file</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="nb">format</span><span class="p">:</span> <span class="n">S3FileFormat</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TableArtifact</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieves a file from the S3 integration.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filepath:</span>
+<span class="sd">                Filepath to retrieve from.</span>
+<span class="sd">            name:</span>
+<span class="sd">                Name of the query.</span>
+<span class="sd">            description:</span>
+<span class="sd">                Description of the query.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            TableArtifact representing the S3 File.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">integration_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span>
+
+        <span class="n">op_name</span> <span class="o">=</span> <span class="n">generate_extract_op_name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span> <span class="n">integration_info</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+        <span class="n">operator_id</span> <span class="o">=</span> <span class="n">generate_uuid</span><span class="p">()</span>
+        <span class="n">output_artifact_id</span> <span class="o">=</span> <span class="n">generate_uuid</span><span class="p">()</span>
+        <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span>
+            <span class="n">deltas</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">AddOrReplaceOperatorDelta</span><span class="p">(</span>
+                    <span class="n">op</span><span class="o">=</span><span class="n">Operator</span><span class="p">(</span>
+                        <span class="nb">id</span><span class="o">=</span><span class="n">operator_id</span><span class="p">,</span>
+                        <span class="n">name</span><span class="o">=</span><span class="n">op_name</span><span class="p">,</span>
+                        <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+                        <span class="n">spec</span><span class="o">=</span><span class="n">OperatorSpec</span><span class="p">(</span>
+                            <span class="n">extract</span><span class="o">=</span><span class="n">ExtractSpec</span><span class="p">(</span>
+                                <span class="n">service</span><span class="o">=</span><span class="n">integration_info</span><span class="o">.</span><span class="n">service</span><span class="p">,</span>
+                                <span class="n">integration_id</span><span class="o">=</span><span class="n">integration_info</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                                <span class="n">parameters</span><span class="o">=</span><span class="n">S3ExtractParams</span><span class="p">(</span><span class="n">filepath</span><span class="o">=</span><span class="n">filepath</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="nb">format</span><span class="p">),</span>
+                            <span class="p">)</span>
+                        <span class="p">),</span>
+                        <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">output_artifact_id</span><span class="p">],</span>
+                    <span class="p">),</span>
+                    <span class="n">output_artifacts</span><span class="o">=</span><span class="p">[</span>
+                        <span class="n">Artifact</span><span class="p">(</span>
+                            <span class="nb">id</span><span class="o">=</span><span class="n">output_artifact_id</span><span class="p">,</span>
+                            <span class="n">name</span><span class="o">=</span><span class="n">artifact_name_from_op_name</span><span class="p">(</span><span class="n">op_name</span><span class="p">),</span>
+                            <span class="n">spec</span><span class="o">=</span><span class="n">ArtifactSpec</span><span class="p">(</span><span class="n">table</span><span class="o">=</span><span class="p">{}),</span>
+                        <span class="p">),</span>
+                    <span class="p">],</span>
+                <span class="p">)</span>
+            <span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">TableArtifact</span><span class="p">(</span>
+            <span class="n">api_client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="p">,</span>
+            <span class="n">dag</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span>
+            <span class="n">artifact_id</span><span class="o">=</span><span class="n">output_artifact_id</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="S3Integration.config"><a class="viewcode-back" href="../../../spiral.integrations.html#spiral.integrations.s3_integration.S3Integration.config">[docs]</a>    <span class="k">def</span> <span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="n">S3FileFormat</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SaveConfig</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Configuration for saving to S3 Integration.</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            filepath:</span>
+<span class="sd">                S3 Filepath to save to.</span>
+<span class="sd">            format:</span>
+<span class="sd">                S3 Fileformat to save as. Can be CSV, JSON, or Parquet.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            SaveConfig object to use in TableArtifact.save()</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">SaveConfig</span><span class="p">(</span>
+            <span class="n">integration_info</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span><span class="p">,</span>
+            <span class="n">parameters</span><span class="o">=</span><span class="n">S3LoadParams</span><span class="p">(</span><span class="n">filepath</span><span class="o">=</span><span class="n">filepath</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="nb">format</span><span class="p">),</span>
+        <span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

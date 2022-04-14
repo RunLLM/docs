@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.operators &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spiral.operators</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.operators</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+
+<span class="kn">from</span> <span class="nn">spiral.enums</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">GoogleSheetsSaveMode</span><span class="p">,</span>
+    <span class="n">ServiceType</span><span class="p">,</span>
+    <span class="n">FunctionType</span><span class="p">,</span>
+    <span class="n">FunctionGranularity</span><span class="p">,</span>
+    <span class="n">GithubRepoConfigContentType</span><span class="p">,</span>
+    <span class="n">ValidationLevel</span><span class="p">,</span>
+    <span class="n">OperatorType</span><span class="p">,</span>
+    <span class="n">SalesforceExtractType</span><span class="p">,</span>
+    <span class="n">S3FileFormat</span><span class="p">,</span>
+    <span class="n">LoadUpdateMode</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">spiral.error</span> <span class="kn">import</span> <span class="n">SpiralError</span>
+<span class="kn">from</span> <span class="nn">spiral.integrations.integration</span> <span class="kn">import</span> <span class="n">IntegrationInfo</span>
+<span class="kn">from</span> <span class="nn">spiral.responses</span> <span class="kn">import</span> <span class="n">UnitTestResult</span>
+
+
+<div class="viewcode-block" id="GithubMetadata"><a class="viewcode-back" href="../../spiral.html#spiral.operators.GithubMetadata">[docs]</a><span class="k">class</span> <span class="nc">GithubMetadata</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Specifies a destination in github integration.</span>
+<span class="sd">    There are two ways to specify the content:</span>
+<span class="sd">    -   by `path`, which points to a file or dir in the github repo.</span>
+<span class="sd">    -   from `repo_config_content_type` and `repo_config_content_name`, which points to</span>
+<span class="sd">        information stored in the repo&#39;s `.aqconfig`.</span>
+<span class="sd">    If using `repo_config` content, backend will ignore `path` and overwrite it with</span>
+<span class="sd">    the `path` specified in `.aqconfig`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">owner</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">repo</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">branch</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">repo_config_content_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">GithubRepoConfigContentType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">repo_config_content_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">commit_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="RelationalDBExtractParams"><a class="viewcode-back" href="../../spiral.html#spiral.operators.RelationalDBExtractParams">[docs]</a><span class="k">class</span> <span class="nc">RelationalDBExtractParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">query</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">github_metadata</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">GithubMetadata</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="SalesforceExtractParams"><a class="viewcode-back" href="../../spiral.html#spiral.operators.SalesforceExtractParams">[docs]</a><span class="k">class</span> <span class="nc">SalesforceExtractParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="nb">type</span><span class="p">:</span> <span class="n">SalesforceExtractType</span>
+    <span class="n">query</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+<div class="viewcode-block" id="GoogleSheetsExtractParams"><a class="viewcode-back" href="../../spiral.html#spiral.operators.GoogleSheetsExtractParams">[docs]</a><span class="k">class</span> <span class="nc">GoogleSheetsExtractParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">spreadsheet_id</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+<div class="viewcode-block" id="S3ExtractParams"><a class="viewcode-back" href="../../spiral.html#spiral.operators.S3ExtractParams">[docs]</a><span class="k">class</span> <span class="nc">S3ExtractParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="nb">format</span><span class="p">:</span> <span class="n">S3FileFormat</span></div>
+
+
+<span class="n">UnionExtractParams</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span>
+    <span class="n">SalesforceExtractParams</span><span class="p">,</span>
+    <span class="n">S3ExtractParams</span><span class="p">,</span>
+    <span class="n">GoogleSheetsExtractParams</span><span class="p">,</span>
+    <span class="n">RelationalDBExtractParams</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<div class="viewcode-block" id="ExtractSpec"><a class="viewcode-back" href="../../spiral.html#spiral.operators.ExtractSpec">[docs]</a><span class="k">class</span> <span class="nc">ExtractSpec</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">service</span><span class="p">:</span> <span class="n">ServiceType</span>
+    <span class="n">integration_id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span>
+    <span class="n">parameters</span><span class="p">:</span> <span class="n">UnionExtractParams</span></div>
+
+
+<div class="viewcode-block" id="RelationalDBLoadParams"><a class="viewcode-back" href="../../spiral.html#spiral.operators.RelationalDBLoadParams">[docs]</a><span class="k">class</span> <span class="nc">RelationalDBLoadParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">update_mode</span><span class="p">:</span> <span class="n">LoadUpdateMode</span></div>
+
+
+<div class="viewcode-block" id="SalesforceLoadParams"><a class="viewcode-back" href="../../spiral.html#spiral.operators.SalesforceLoadParams">[docs]</a><span class="k">class</span> <span class="nc">SalesforceLoadParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="nb">object</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+<div class="viewcode-block" id="GoogleSheetsLoadParams"><a class="viewcode-back" href="../../spiral.html#spiral.operators.GoogleSheetsLoadParams">[docs]</a><span class="k">class</span> <span class="nc">GoogleSheetsLoadParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">save_mode</span><span class="p">:</span> <span class="n">GoogleSheetsSaveMode</span></div>
+
+
+<div class="viewcode-block" id="S3LoadParams"><a class="viewcode-back" href="../../spiral.html#spiral.operators.S3LoadParams">[docs]</a><span class="k">class</span> <span class="nc">S3LoadParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="nb">format</span><span class="p">:</span> <span class="n">S3FileFormat</span></div>
+
+
+<span class="n">UnionLoadParams</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span>
+    <span class="n">SalesforceLoadParams</span><span class="p">,</span> <span class="n">S3LoadParams</span><span class="p">,</span> <span class="n">GoogleSheetsLoadParams</span><span class="p">,</span> <span class="n">RelationalDBLoadParams</span>
+<span class="p">]</span>
+
+
+<span class="c1"># Internal class used by SDK to represent the config for loading to an integration.</span>
+<div class="viewcode-block" id="SaveConfig"><a class="viewcode-back" href="../../spiral.html#spiral.operators.SaveConfig">[docs]</a><span class="k">class</span> <span class="nc">SaveConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">integration_info</span><span class="p">:</span> <span class="n">IntegrationInfo</span>
+    <span class="n">parameters</span><span class="p">:</span> <span class="n">UnionLoadParams</span></div>
+
+
+<span class="c1"># Class expected by backend for a load operator.</span>
+<div class="viewcode-block" id="LoadSpec"><a class="viewcode-back" href="../../spiral.html#spiral.operators.LoadSpec">[docs]</a><span class="k">class</span> <span class="nc">LoadSpec</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">service</span><span class="p">:</span> <span class="n">ServiceType</span>
+    <span class="n">integration_id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span>
+    <span class="n">parameters</span><span class="p">:</span> <span class="n">UnionLoadParams</span></div>
+
+
+<div class="viewcode-block" id="EntryPoint"><a class="viewcode-back" href="../../spiral.html#spiral.operators.EntryPoint">[docs]</a><span class="k">class</span> <span class="nc">EntryPoint</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">file</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">class_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">method</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+<div class="viewcode-block" id="FunctionSpec"><a class="viewcode-back" href="../../spiral.html#spiral.operators.FunctionSpec">[docs]</a><span class="k">class</span> <span class="nc">FunctionSpec</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="nb">type</span><span class="p">:</span> <span class="n">FunctionType</span>
+    <span class="n">language</span> <span class="o">=</span> <span class="s2">&quot;Python&quot;</span>
+    <span class="n">granularity</span><span class="p">:</span> <span class="n">FunctionGranularity</span>
+    <span class="n">s3_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">github_metadata</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">GithubMetadata</span><span class="p">]</span>
+    <span class="n">entry_point</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">EntryPoint</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># File path to the function zip file.</span>
+    <span class="c1"># TODO(kenxu): Investigate loading the function file contents into this Operator beforehand?</span>
+    <span class="c1"># Will excluded from request serialization, but can be set and read.</span>
+    <span class="n">file_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+<div class="viewcode-block" id="FunctionSpec.Config"><a class="viewcode-back" href="../../spiral.html#spiral.operators.FunctionSpec.Config">[docs]</a>    <span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;file_path&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;exclude&quot;</span><span class="p">:</span> <span class="o">...</span><span class="p">}}</span></div></div>
+
+
+<div class="viewcode-block" id="ValidationSpec"><a class="viewcode-back" href="../../spiral.html#spiral.operators.ValidationSpec">[docs]</a><span class="k">class</span> <span class="nc">ValidationSpec</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">level</span><span class="p">:</span> <span class="n">ValidationLevel</span>
+    <span class="n">function</span><span class="p">:</span> <span class="n">FunctionSpec</span>
+
+    <span class="c1"># Records whether this validation successfully ran in the SDK.</span>
+    <span class="c1"># Will be excluded from request serialization, but can be set and read.</span>
+    <span class="n">test_result</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">UnitTestResult</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="ValidationSpec.Config"><a class="viewcode-back" href="../../spiral.html#spiral.operators.ValidationSpec.Config">[docs]</a>    <span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;test_result&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;exclude&quot;</span><span class="p">:</span> <span class="o">...</span><span class="p">}}</span></div></div>
+
+
+<div class="viewcode-block" id="MetricSpec"><a class="viewcode-back" href="../../spiral.html#spiral.operators.MetricSpec">[docs]</a><span class="k">class</span> <span class="nc">MetricSpec</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">function</span><span class="p">:</span> <span class="n">FunctionSpec</span></div>
+
+
+<div class="viewcode-block" id="OperatorSpec"><a class="viewcode-back" href="../../spiral.html#spiral.operators.OperatorSpec">[docs]</a><span class="k">class</span> <span class="nc">OperatorSpec</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">extract</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExtractSpec</span><span class="p">]</span>
+    <span class="n">load</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LoadSpec</span><span class="p">]</span>
+    <span class="n">function</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">FunctionSpec</span><span class="p">]</span>
+    <span class="n">metric</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">MetricSpec</span><span class="p">]</span>
+    <span class="n">validation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ValidationSpec</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Operator"><a class="viewcode-back" href="../../spiral.html#spiral.operators.Operator">[docs]</a><span class="k">class</span> <span class="nc">Operator</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">spec</span><span class="p">:</span> <span class="n">OperatorSpec</span>
+    <span class="n">inputs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">outputs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="Operator.file_path"><a class="viewcode-back" href="../../spiral.html#spiral.operators.Operator.file_path">[docs]</a>    <span class="k">def</span> <span class="nf">file_path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">function</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">function</span><span class="o">.</span><span class="n">file_path</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">validation</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">validation</span><span class="o">.</span><span class="n">function</span><span class="o">.</span><span class="n">file_path</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">metric</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">metric</span><span class="o">.</span><span class="n">function</span><span class="o">.</span><span class="n">file_path</span>
+
+        <span class="k">return</span> <span class="kc">None</span></div></div>
+
+
+<div class="viewcode-block" id="get_operator_type"><a class="viewcode-back" href="../../spiral.html#spiral.operators.get_operator_type">[docs]</a><span class="k">def</span> <span class="nf">get_operator_type</span><span class="p">(</span><span class="n">operator</span><span class="p">:</span> <span class="n">Operator</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OperatorType</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">operator</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">extract</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">OperatorType</span><span class="o">.</span><span class="n">EXTRACT</span>
+    <span class="k">if</span> <span class="n">operator</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">load</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">OperatorType</span><span class="o">.</span><span class="n">LOAD</span>
+    <span class="k">if</span> <span class="n">operator</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">function</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">OperatorType</span><span class="o">.</span><span class="n">FUNCTION</span>
+    <span class="k">if</span> <span class="n">operator</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">validation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">OperatorType</span><span class="o">.</span><span class="n">VALIDATION</span>
+    <span class="k">if</span> <span class="n">operator</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">metric</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">OperatorType</span><span class="o">.</span><span class="n">METRIC</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">SpiralError</span><span class="p">(</span><span class="s2">&quot;Invalid operator type&quot;</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

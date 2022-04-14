@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.table_artifact &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spiral.table_artifact</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.table_artifact</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span> <span class="nn">spiral.api_client</span> <span class="kn">import</span> <span class="n">APIClient</span>
+<span class="kn">from</span> <span class="nn">spiral.dag</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DAG</span><span class="p">,</span>
+    <span class="n">apply_deltas_to_dag</span><span class="p">,</span>
+    <span class="n">AddOrReplaceOperatorDelta</span><span class="p">,</span>
+    <span class="n">SubgraphDAGDelta</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">spiral.enums</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">FunctionGranularity</span><span class="p">,</span>
+    <span class="n">FunctionType</span><span class="p">,</span>
+    <span class="n">OperatorType</span><span class="p">,</span>
+    <span class="n">ValidationLevel</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">spiral.error</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">InvalidIntegrationException</span><span class="p">,</span>
+    <span class="n">SpiralError</span><span class="p">,</span>
+    <span class="n">ValidationDoesNotExistException</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">spiral.operators</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">SaveConfig</span><span class="p">,</span>
+    <span class="n">Operator</span><span class="p">,</span>
+    <span class="n">OperatorSpec</span><span class="p">,</span>
+    <span class="n">LoadSpec</span><span class="p">,</span>
+    <span class="n">ValidationSpec</span><span class="p">,</span>
+    <span class="n">FunctionSpec</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">spiral.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ValidationTestDecoratorFunction</span><span class="p">,</span>
+    <span class="n">create_zip_file</span><span class="p">,</span>
+    <span class="n">delete_zip_folder_and_file</span><span class="p">,</span>
+    <span class="n">generate_uuid</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">spiral.generic_artifact</span> <span class="kn">import</span> <span class="n">Artifact</span>
+
+
+<div class="viewcode-block" id="TableArtifact"><a class="viewcode-back" href="../../spiral.html#spiral.table_artifact.TableArtifact">[docs]</a><span class="k">class</span> <span class="nc">TableArtifact</span><span class="p">(</span><span class="n">Artifact</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot;This class represents a computed table within the flow&#39;s DAG.</span>
+
+<span class="sd">    An artifact can only be created from a Flow object, or by applying</span>
+<span class="sd">    operators to an existing artifact. For example:</span>
+
+<span class="sd">        client = spiral.SpiralClient(...)</span>
+<span class="sd">        flow = client.create_flow(&quot;foo&quot;)</span>
+<span class="sd">        tableArtifactFromFlow = flow.sql(&quot;SELECT * ...&quot;)</span>
+<span class="sd">        tableArtifactFromOperator = transform(&#39;function.zip&#39;, tableArtifactFromFlow)</span>
+
+<span class="sd">        Alternatively:</span>
+
+<span class="sd">        @op</span>
+<span class="sd">        def foo(df):</span>
+<span class="sd">            # the contents of in `function.zip` here</span>
+<span class="sd">            return result</span>
+
+<span class="sd">        tableArtifactFromOperator = foo(tableArtifactFromFlow)</span>
+
+<span class="sd">    The contents of these artifacts can be manifested locally or written to an</span>
+<span class="sd">    integration. For example:</span>
+
+<span class="sd">        data = tableArtifact.to_df()</span>
+<span class="sd">        tableArtifact.save(&quot;integration/output_table&quot;)</span>
+
+<span class="sd">    The contents of these artifacts can also be tested. For example:</span>
+
+<span class="sd">        passed, logs = table_artifact.add_unittest(</span>
+<span class="sd">            name=&quot;foo&quot;,</span>
+<span class="sd">            description=&quot;This is an illustrative example&quot;,</span>
+<span class="sd">            file_path=&quot;unittest.zip&quot;,</span>
+<span class="sd">        )</span>
+
+<span class="sd">        Alternatively:</span>
+
+<span class="sd">        @add_unittest</span>
+<span class="sd">        def foo_test(df: pd.DataFrame):</span>
+<span class="sd">            return df[&quot;year&quot;] &lt; 2022</span>
+
+<span class="sd">        passed, logs = foo_test(table_artifact)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">api_client</span><span class="p">:</span> <span class="n">APIClient</span><span class="p">,</span>
+        <span class="n">dag</span><span class="p">:</span> <span class="n">DAG</span><span class="p">,</span>
+        <span class="n">artifact_id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span> <span class="o">=</span> <span class="n">api_client</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span> <span class="o">=</span> <span class="n">dag</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_artifact_id</span> <span class="o">=</span> <span class="n">artifact_id</span>
+
+        <span class="c1"># Record the statuses of validations that have already run.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validation_statuses</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="TableArtifact.to_df"><a class="viewcode-back" href="../../spiral.html#spiral.table_artifact.TableArtifact.to_df">[docs]</a>    <span class="k">def</span> <span class="nf">to_df</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Materializes a TableArtifact into an actual dataframe.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sample:</span>
+<span class="sd">                The number of rows to restrict the output dataframe.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dataframe containing the tabular contents of this artifact.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            InvalidRequestError:</span>
+<span class="sd">                An error occurred because of an issue with the user&#39;s code</span>
+<span class="sd">                or sql queries, or the `sample` parameter is malformed.</span>
+<span class="sd">            InternalServerError:</span>
+<span class="sd">                An unexpected error occurred within the Spiral cluster.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dag</span> <span class="o">=</span> <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span>
+            <span class="n">deltas</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">SubgraphDAGDelta</span><span class="p">(</span>
+                    <span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_artifact_id</span><span class="p">],</span>
+                    <span class="n">include_validation_operators</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">],</span>
+            <span class="n">make_copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">preview_resp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="o">.</span><span class="n">preview</span><span class="p">(</span><span class="n">dag</span><span class="o">=</span><span class="n">dag</span><span class="p">)</span>
+        <span class="n">artifact_result</span> <span class="o">=</span> <span class="n">preview_resp</span><span class="o">.</span><span class="n">artifact_results</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_artifact_id</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">artifact_result</span><span class="o">.</span><span class="n">table</span><span class="p">:</span>
+            <span class="c1"># Translate the previewed table in a dataframe.</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">artifact_result</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">data</span><span class="p">)[</span><span class="s2">&quot;data&quot;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SpiralError</span><span class="p">(</span><span class="s2">&quot;Artifact does not have table.&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TableArtifact.save"><a class="viewcode-back" href="../../spiral.html#spiral.table_artifact.TableArtifact.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">SaveConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Register an integration to write the contents of this artifact to.</span>
+
+<span class="sd">        db_integration = spiral_client.load_integration(name=&quot;spiral_demo/&quot;)</span>
+<span class="sd">        churn_data = db_integration.sql(...)</span>
+<span class="sd">        churn_data.save(config=db_integration.config(table=&quot;test&quot;))</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            config:</span>
+<span class="sd">                SaveConfig object generated from integration using</span>
+<span class="sd">                the &lt;integration&gt;.config(...) method.</span>
+<span class="sd">        Raises:</span>
+<span class="sd">            InvalidIntegrationException:</span>
+<span class="sd">                An error occurred because the requested integration could not be</span>
+<span class="sd">                found.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">integration_info</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">integration_info</span>
+        <span class="n">integration_load_params</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">parameters</span>
+        <span class="n">integrations_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="o">.</span><span class="n">list_integrations</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">integration_info</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">integrations_map</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidIntegrationException</span><span class="p">(</span><span class="s2">&quot;Not connected to db </span><span class="si">%s</span><span class="s2">!&quot;</span> <span class="o">%</span> <span class="n">integration_info</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="c1"># Add the load operator as a terminal node.</span>
+        <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span>
+            <span class="n">deltas</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">AddOrReplaceOperatorDelta</span><span class="p">(</span>
+                    <span class="n">op</span><span class="o">=</span><span class="n">Operator</span><span class="p">(</span>
+                        <span class="nb">id</span><span class="o">=</span><span class="n">generate_uuid</span><span class="p">(),</span>
+                        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> Loader&quot;</span> <span class="o">%</span> <span class="n">integration_info</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                        <span class="n">spec</span><span class="o">=</span><span class="n">OperatorSpec</span><span class="p">(</span>
+                            <span class="n">load</span><span class="o">=</span><span class="n">LoadSpec</span><span class="p">(</span>
+                                <span class="n">service</span><span class="o">=</span><span class="n">integration_info</span><span class="o">.</span><span class="n">service</span><span class="p">,</span>
+                                <span class="n">integration_id</span><span class="o">=</span><span class="n">integration_info</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                                <span class="n">parameters</span><span class="o">=</span><span class="n">integration_load_params</span><span class="p">,</span>
+                            <span class="p">)</span>
+                        <span class="p">),</span>
+                        <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_artifact_id</span><span class="p">],</span>
+                    <span class="p">),</span>
+                    <span class="n">output_artifacts</span><span class="o">=</span><span class="p">[],</span>
+                <span class="p">)</span>
+            <span class="p">],</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="TableArtifact.add_validation_test"><a class="viewcode-back" href="../../spiral.html#spiral.table_artifact.TableArtifact.add_validation_test">[docs]</a>    <span class="k">def</span> <span class="nf">add_validation_test</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">func</span><span class="p">:</span> <span class="n">ValidationTestDecoratorFunction</span><span class="p">,</span>
+        <span class="n">blocking</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">file_dependencies</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Attaches a validation test on this artifact.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name:</span>
+<span class="sd">                The name of this unit test.</span>
+<span class="sd">            description:</span>
+<span class="sd">                A description of what this test is checking.</span>
+<span class="sd">            function:</span>
+<span class="sd">                Python function to turn into unit test. It can take any number of panda Dataframes as arguments.</span>
+<span class="sd">                The requirements.txt file in the current directory is used. If no such file exists,</span>
+<span class="sd">                we will infer the requirements that the function needs.</span>
+<span class="sd">            blocking:</span>
+<span class="sd">                Whether this test failing should also fail the entire flow.</span>
+<span class="sd">            file_dependencies:</span>
+<span class="sd">                A list of relative paths to files that the function needs to read.</span>
+<span class="sd">                Python classes/methods already imported within the function&#39;s file</span>
+<span class="sd">                need not be included.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A boolean representing whether the unit test passed.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            InvalidRequestError:</span>
+<span class="sd">                An error occurred because of an issue with the user&#39;s code</span>
+<span class="sd">                or sql queries, or the `sample` parameter is malformed.</span>
+<span class="sd">            InternalServerError:</span>
+<span class="sd">                An unexpected error occurred within the Spiral cluster.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">dir_name</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;_spiral_validation_test&quot;</span>
+        <span class="n">delete_zip_folder_and_file</span><span class="p">(</span><span class="n">dir_name</span><span class="p">)</span>
+        <span class="n">zip_file_path</span> <span class="o">=</span> <span class="n">create_zip_file</span><span class="p">(</span><span class="n">func</span><span class="o">.</span><span class="n">__wrapped__</span><span class="p">,</span> <span class="n">dir_name</span><span class="p">,</span> <span class="n">file_dependencies</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+        <span class="n">funcion_spec</span> <span class="o">=</span> <span class="n">FunctionSpec</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">FunctionType</span><span class="o">.</span><span class="n">FILE</span><span class="p">,</span>
+            <span class="n">granularity</span><span class="o">=</span><span class="n">FunctionGranularity</span><span class="o">.</span><span class="n">TABLE</span><span class="p">,</span>
+            <span class="n">file_path</span><span class="o">=</span><span class="n">zip_file_path</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_validation_test</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">function_spec</span><span class="o">=</span><span class="n">funcion_spec</span><span class="p">,</span>
+            <span class="n">blocking</span><span class="o">=</span><span class="n">blocking</span><span class="p">,</span>
+            <span class="n">attach_to_dag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="TableArtifact.delete_validation_test"><a class="viewcode-back" href="../../spiral.html#spiral.table_artifact.TableArtifact.delete_validation_test">[docs]</a>    <span class="k">def</span> <span class="nf">delete_validation_test</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Removes a validation test from this artifact.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name:</span>
+<span class="sd">                The name of the unittest to remove.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValidationDoesNotExistException:</span>
+<span class="sd">                An error occurred because the requested test cannot be found.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">validation_operators</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">list_operators</span><span class="p">(</span>
+            <span class="n">filter_to</span><span class="o">=</span><span class="p">[</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">VALIDATION</span><span class="p">],</span>
+            <span class="n">on_artifact_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_artifact_id</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">validation_id_by_name</span> <span class="o">=</span> <span class="p">{</span><span class="n">op</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">op</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">validation_operators</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">validation_id_by_name</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">ValidationDoesNotExistException</span><span class="p">(</span><span class="s2">&quot;Unit Test </span><span class="si">%s</span><span class="s2"> does not exist.&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">remove_operator</span><span class="p">(</span>
+            <span class="n">operator_id</span><span class="o">=</span><span class="n">validation_id_by_name</span><span class="p">[</span><span class="n">name</span><span class="p">],</span>
+            <span class="n">must_be_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">VALIDATION</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="TableArtifact.describe"><a class="viewcode-back" href="../../spiral.html#spiral.table_artifact.TableArtifact.describe">[docs]</a>    <span class="k">def</span> <span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Prints out a human-readable description of the table artifact.&quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;==================== ARTIFACT =============================&quot;</span><span class="p">)</span>
+
+        <span class="n">input_operator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">must_get_operator</span><span class="p">(</span><span class="n">with_output_artifact_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_artifact_id</span><span class="p">)</span>
+        <span class="n">load_operators</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">list_operators</span><span class="p">(</span>
+            <span class="n">filter_to</span><span class="o">=</span><span class="p">[</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">LOAD</span><span class="p">],</span>
+            <span class="n">on_artifact_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_artifact_id</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">validation_operators</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">list_operators</span><span class="p">(</span>
+            <span class="n">filter_to</span><span class="o">=</span><span class="p">[</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">VALIDATION</span><span class="p">],</span>
+            <span class="n">on_artifact_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_artifact_id</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">readable_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;Id&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_artifact_id</span><span class="p">),</span>
+            <span class="s2">&quot;Label&quot;</span><span class="p">:</span> <span class="n">input_operator</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;Spec&quot;</span><span class="p">:</span> <span class="n">input_operator</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="s2">&quot;Validations&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="n">op</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="s2">&quot;Passed&quot;</span><span class="p">:</span> <span class="n">op</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">validation</span><span class="o">.</span><span class="n">test_result</span><span class="o">.</span><span class="n">check_passed</span><span class="p">,</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">validation_operators</span>
+                <span class="k">if</span> <span class="n">op</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">validation</span> <span class="ow">and</span> <span class="n">op</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">validation</span><span class="o">.</span><span class="n">test_result</span>
+            <span class="p">],</span>
+            <span class="s2">&quot;Destinations&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">load</span><span class="o">.</span><span class="n">integration_id</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">load_operators</span>
+                <span class="k">if</span> <span class="n">op</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">load</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="p">],</span>
+        <span class="p">}</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">readable_dict</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span></div>
+
+    <span class="k">def</span> <span class="nf">_run_validation_test</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">function_spec</span><span class="p">:</span> <span class="n">FunctionSpec</span><span class="p">,</span>
+        <span class="n">blocking</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">attach_to_dag</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Runs a validation test on this artifact and optionally adds it to workflow DAG.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name:</span>
+<span class="sd">                The name of this unit test.</span>
+<span class="sd">            description:</span>
+<span class="sd">                A description of what this test is checking.</span>
+<span class="sd">            file_path:</span>
+<span class="sd">                The relative file path to the zip file containing the testing code.</span>
+<span class="sd">            blocking:</span>
+<span class="sd">                Whether this test failing should also fail the entire flow.</span>
+<span class="sd">            make_dag_copy:</span>
+<span class="sd">                If False, unit test is not attached to workflow dag.</span>
+<span class="sd">                If True, unit test is attached to workflow dag.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A boolean representing whether the unit test passed.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            InvalidRequestError:</span>
+<span class="sd">                An error occurred because of an issue with the user&#39;s code</span>
+<span class="sd">                or sql queries, or the `sample` parameter is malformed.</span>
+<span class="sd">            InternalServerError:</span>
+<span class="sd">                An unexpected error occurred within the Spiral cluster.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">level</span> <span class="o">=</span> <span class="n">ValidationLevel</span><span class="o">.</span><span class="n">WARNING</span>
+        <span class="k">if</span> <span class="n">blocking</span><span class="p">:</span>
+            <span class="n">level</span> <span class="o">=</span> <span class="n">ValidationLevel</span><span class="o">.</span><span class="n">ERROR</span>
+
+        <span class="n">validation_operator_id</span> <span class="o">=</span> <span class="n">generate_uuid</span><span class="p">()</span>
+        <span class="n">validation_spec</span> <span class="o">=</span> <span class="n">ValidationSpec</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">,</span> <span class="n">function</span><span class="o">=</span><span class="n">function_spec</span><span class="p">)</span>
+        <span class="n">validation_op</span> <span class="o">=</span> <span class="n">Operator</span><span class="p">(</span>
+            <span class="nb">id</span><span class="o">=</span><span class="n">validation_operator_id</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">spec</span><span class="o">=</span><span class="n">OperatorSpec</span><span class="p">(</span>
+                <span class="n">validation</span><span class="o">=</span><span class="n">validation_spec</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_artifact_id</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">dag_with_validation</span> <span class="o">=</span> <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span>
+            <span class="n">deltas</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">AddOrReplaceOperatorDelta</span><span class="p">(</span>
+                    <span class="n">validation_op</span><span class="p">,</span>
+                    <span class="n">output_artifacts</span><span class="o">=</span><span class="p">[],</span>
+                <span class="p">),</span>
+            <span class="p">],</span>
+            <span class="n">make_copy</span><span class="o">=</span><span class="ow">not</span> <span class="n">attach_to_dag</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">preview_resp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="o">.</span><span class="n">preview</span><span class="p">(</span>
+            <span class="n">dag</span><span class="o">=</span><span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+                <span class="n">dag_with_validation</span><span class="p">,</span>
+                <span class="n">deltas</span><span class="o">=</span><span class="p">[</span>
+                    <span class="n">SubgraphDAGDelta</span><span class="p">(</span>
+                        <span class="n">operator_ids</span><span class="o">=</span><span class="p">[</span><span class="n">validation_operator_id</span><span class="p">],</span>
+                        <span class="n">include_validation_operators</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="p">),</span>
+                <span class="p">],</span>
+                <span class="c1"># When pruning to the subgraph, we want to always make a copy.</span>
+                <span class="n">make_copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">operator_result</span> <span class="o">=</span> <span class="n">preview_resp</span><span class="o">.</span><span class="n">operator_results</span><span class="p">[</span><span class="n">validation_operator_id</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">operator_result</span><span class="o">.</span><span class="n">test_result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SpiralError</span><span class="p">(</span><span class="s2">&quot;Test result not set properly.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">attach_to_dag</span><span class="p">:</span>
+            <span class="c1"># Update the validation test result</span>
+            <span class="n">validation_spec</span><span class="o">.</span><span class="n">test_result</span> <span class="o">=</span> <span class="n">operator_result</span><span class="o">.</span><span class="n">test_result</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="o">.</span><span class="n">set_validation_spec</span><span class="p">(</span>
+                <span class="n">operator_id</span><span class="o">=</span><span class="n">validation_operator_id</span><span class="p">,</span>
+                <span class="n">spec</span><span class="o">=</span><span class="n">validation_spec</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">operator_result</span><span class="o">.</span><span class="n">test_result</span><span class="o">.</span><span class="n">check_passed</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

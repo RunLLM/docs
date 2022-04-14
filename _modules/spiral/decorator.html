@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.decorator &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spiral.decorator</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.decorator</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+
+<span class="kn">from</span> <span class="nn">spiral.artifact</span> <span class="kn">import</span> <span class="n">Artifact</span><span class="p">,</span> <span class="n">ArtifactSpec</span>
+<span class="kn">from</span> <span class="nn">spiral.dag</span> <span class="kn">import</span> <span class="n">apply_deltas_to_dag</span><span class="p">,</span> <span class="n">AddOrReplaceOperatorDelta</span>
+<span class="kn">from</span> <span class="nn">spiral.enums</span> <span class="kn">import</span> <span class="n">FunctionType</span><span class="p">,</span> <span class="n">FunctionGranularity</span>
+<span class="kn">from</span> <span class="nn">spiral.operators</span> <span class="kn">import</span> <span class="n">Operator</span><span class="p">,</span> <span class="n">OperatorSpec</span><span class="p">,</span> <span class="n">FunctionSpec</span><span class="p">,</span> <span class="n">MetricSpec</span>
+<span class="kn">from</span> <span class="nn">spiral.table_artifact</span> <span class="kn">import</span> <span class="n">TableArtifact</span>
+<span class="kn">from</span> <span class="nn">spiral.metric_artifact</span> <span class="kn">import</span> <span class="n">MetricArtifact</span>
+<span class="kn">from</span> <span class="nn">spiral.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">UserFunction</span><span class="p">,</span>
+    <span class="n">ValidationTestFunction</span><span class="p">,</span>
+    <span class="n">ValidationTestDecoratorFunction</span><span class="p">,</span>
+    <span class="n">DecoratedValidationTestFunction</span><span class="p">,</span>
+    <span class="n">MetricFunction</span><span class="p">,</span>
+    <span class="n">create_zip_file</span><span class="p">,</span>
+    <span class="n">delete_zip_folder_and_file</span><span class="p">,</span>
+    <span class="n">generate_uuid</span><span class="p">,</span>
+    <span class="n">artifact_name_from_op_name</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">spiral.error</span> <span class="kn">import</span> <span class="n">SpiralError</span>
+
+<span class="n">DecoratorFunction</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">TableArtifact</span><span class="p">]</span>
+<span class="n">MetricDecoratorFunction</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">MetricArtifact</span><span class="p">]</span>
+<span class="n">DecoratedMetricFunction</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">MetricFunction</span><span class="p">],</span> <span class="n">MetricDecoratorFunction</span><span class="p">]</span>
+
+<span class="n">Spec</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">FunctionSpec</span><span class="p">,</span> <span class="n">MetricSpec</span><span class="p">]</span>
+<span class="n">OutputArtifact</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">TableArtifact</span><span class="p">,</span> <span class="n">MetricArtifact</span><span class="p">]</span>
+<span class="n">InputArtifact</span> <span class="o">=</span> <span class="n">TableArtifact</span>
+
+
+<div class="viewcode-block" id="wrap_spec"><a class="viewcode-back" href="../../spiral.html#spiral.decorator.wrap_spec">[docs]</a><span class="k">def</span> <span class="nf">wrap_spec</span><span class="p">(</span>
+    <span class="n">spec</span><span class="p">:</span> <span class="n">OperatorSpec</span><span class="p">,</span> <span class="o">*</span><span class="n">input_artifacts</span><span class="p">:</span> <span class="n">InputArtifact</span><span class="p">,</span> <span class="n">op_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OutputArtifact</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Applies a python function to existing artifacts.</span>
+<span class="sd">    The function must be named predict() on a class named &quot;Function&quot;,</span>
+<span class="sd">    in a file named &quot;model.py&quot;:</span>
+<span class="sd">        class Function:</span>
+<span class="sd">            def predict(self, *args):</span>
+<span class="sd">                ...</span>
+<span class="sd">    Args:</span>
+<span class="sd">        file_path:</span>
+<span class="sd">            The relative path to the zipped folder containing &quot;model.py&quot;.</span>
+<span class="sd">        *input_artifacts:</span>
+<span class="sd">            All the artifacts that will serve as input to the python function.</span>
+<span class="sd">            The function must have the same number of parameters as input</span>
+<span class="sd">            artifacts.</span>
+<span class="sd">        op_name:</span>
+<span class="sd">            The name of the operator that generated this artifact.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_artifacts</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Transformation requires at least one input artifact.&quot;</span><span class="p">)</span>
+
+    <span class="n">dag</span> <span class="o">=</span> <span class="n">input_artifacts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">_dag</span>
+    <span class="n">api_client</span> <span class="o">=</span> <span class="n">input_artifacts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">_api_client</span>
+
+    <span class="c1"># Check that all the artifact ids exist in the dag.</span>
+    <span class="k">for</span> <span class="n">artifact</span> <span class="ow">in</span> <span class="n">input_artifacts</span><span class="p">:</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">dag</span><span class="o">.</span><span class="n">must_get_artifact</span><span class="p">(</span><span class="n">artifact</span><span class="o">.</span><span class="n">id</span><span class="p">())</span>
+
+    <span class="n">operator_id</span> <span class="o">=</span> <span class="n">generate_uuid</span><span class="p">()</span>
+    <span class="n">output_artifact_id</span> <span class="o">=</span> <span class="n">generate_uuid</span><span class="p">()</span>
+
+    <span class="n">output_artifact</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">MetricArtifact</span><span class="p">,</span> <span class="n">TableArtifact</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">metric</span><span class="p">:</span>
+        <span class="n">artifact_spec</span> <span class="o">=</span> <span class="n">ArtifactSpec</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="p">{})</span>
+        <span class="n">output_artifact</span> <span class="o">=</span> <span class="n">MetricArtifact</span><span class="p">(</span>
+            <span class="n">api_client</span><span class="o">=</span><span class="n">api_client</span><span class="p">,</span> <span class="n">dag</span><span class="o">=</span><span class="n">dag</span><span class="p">,</span> <span class="n">artifact_id</span><span class="o">=</span><span class="n">output_artifact_id</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">spec</span><span class="o">.</span><span class="n">function</span><span class="p">:</span>
+        <span class="n">artifact_spec</span> <span class="o">=</span> <span class="n">ArtifactSpec</span><span class="p">(</span><span class="n">table</span><span class="o">=</span><span class="p">{})</span>
+        <span class="n">output_artifact</span> <span class="o">=</span> <span class="n">TableArtifact</span><span class="p">(</span>
+            <span class="n">api_client</span><span class="o">=</span><span class="n">api_client</span><span class="p">,</span> <span class="n">dag</span><span class="o">=</span><span class="n">dag</span><span class="p">,</span> <span class="n">artifact_id</span><span class="o">=</span><span class="n">output_artifact_id</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">SpiralError</span><span class="p">(</span><span class="s2">&quot;Operator spec not supported.&quot;</span><span class="p">)</span>
+
+    <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+        <span class="n">dag</span><span class="p">,</span>
+        <span class="n">deltas</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">AddOrReplaceOperatorDelta</span><span class="p">(</span>
+                <span class="n">op</span><span class="o">=</span><span class="n">Operator</span><span class="p">(</span>
+                    <span class="nb">id</span><span class="o">=</span><span class="n">operator_id</span><span class="p">,</span>
+                    <span class="n">name</span><span class="o">=</span><span class="n">op_name</span><span class="p">,</span>
+                    <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+                    <span class="n">spec</span><span class="o">=</span><span class="n">spec</span><span class="p">,</span>
+                    <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">artifact</span><span class="o">.</span><span class="n">id</span><span class="p">()</span> <span class="k">for</span> <span class="n">artifact</span> <span class="ow">in</span> <span class="n">input_artifacts</span><span class="p">],</span>
+                    <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">output_artifact_id</span><span class="p">],</span>
+                <span class="p">),</span>
+                <span class="n">output_artifacts</span><span class="o">=</span><span class="p">[</span>
+                    <span class="n">Artifact</span><span class="p">(</span>
+                        <span class="nb">id</span><span class="o">=</span><span class="n">output_artifact_id</span><span class="p">,</span>
+                        <span class="n">name</span><span class="o">=</span><span class="n">artifact_name_from_op_name</span><span class="p">(</span><span class="n">op_name</span><span class="p">),</span>
+                        <span class="n">spec</span><span class="o">=</span><span class="n">artifact_spec</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">],</span>
+            <span class="p">),</span>
+        <span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">output_artifact</span></div>
+
+
+<div class="viewcode-block" id="op"><a class="viewcode-back" href="../../spiral.html#spiral.decorator.op">[docs]</a><span class="k">def</span> <span class="nf">op</span><span class="p">(</span>
+    <span class="n">file_dependencies</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">UserFunction</span><span class="p">],</span> <span class="n">DecoratorFunction</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;A decorator that converts regular python functions into Spiral operators.</span>
+
+<span class="sd">    The decorated python function can take any number of panda Dataframes as arguments.</span>
+<span class="sd">    The requirements.txt file in the current directory is used. If no such file exists,</span>
+<span class="sd">    we will infer the requirements that the function needs.</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        @op</span>
+<span class="sd">        def compute_recommendations(customer_profiles: pd.DataFrame, recent_clicks: pd.DataFrame):</span>
+<span class="sd">            ... # perform some ML</span>
+<span class="sd">            return recs</span>
+
+<span class="sd">        customer_profiles = flow.sql(&quot;SELECT * from user_profile&quot;, db=&quot;postgres&quot;)</span>
+<span class="sd">        recent_clicks = flow.sql(&quot;SELECT * recent_clicks&quot;, db=&quot;google_analytics/shopping&quot;)</span>
+
+<span class="sd">        # Recommendations is a table artifact representing the computed output</span>
+<span class="sd">        # of `compute_recommendations()`.</span>
+<span class="sd">        recommendations = foo(customer_profiles, recent_clicks)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file_dependencies:</span>
+<span class="sd">            A list of relative paths to files that the function needs to read.</span>
+<span class="sd">            Python classes/methods already imported within the function&#39;s file</span>
+<span class="sd">            need not be included.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">inner_decorator</span><span class="p">(</span><span class="n">func</span><span class="p">:</span> <span class="n">UserFunction</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DecoratorFunction</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">wrapped</span><span class="p">(</span><span class="o">*</span><span class="n">sql_artifacts</span><span class="p">:</span> <span class="n">TableArtifact</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TableArtifact</span><span class="p">:</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Creates the following structure:</span>
+<span class="sd">            &lt;funcname&gt;_spiral</span>
+<span class="sd">             - model.py</span>
+<span class="sd">             - model.pkl</span>
+<span class="sd">             - requirements.txt</span>
+<span class="sd">            Creates TableArtifact using &lt;funcname&gt;_spiral.zip as the function.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">dir_name</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;_spiral&quot;</span>
+            <span class="n">delete_zip_folder_and_file</span><span class="p">(</span><span class="n">dir_name</span><span class="p">)</span>
+            <span class="n">zip_file_path</span> <span class="o">=</span> <span class="n">create_zip_file</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">dir_name</span><span class="p">,</span> <span class="n">file_dependencies</span><span class="p">)</span>
+            <span class="n">function_spec</span> <span class="o">=</span> <span class="n">FunctionSpec</span><span class="p">(</span>
+                <span class="nb">type</span><span class="o">=</span><span class="n">FunctionType</span><span class="o">.</span><span class="n">FILE</span><span class="p">,</span>
+                <span class="n">granularity</span><span class="o">=</span><span class="n">FunctionGranularity</span><span class="o">.</span><span class="n">TABLE</span><span class="p">,</span>
+                <span class="n">file_path</span><span class="o">=</span><span class="n">zip_file_path</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">new_function_artifact</span> <span class="o">=</span> <span class="n">wrap_spec</span><span class="p">(</span>
+                <span class="n">OperatorSpec</span><span class="p">(</span><span class="n">function</span><span class="o">=</span><span class="n">function_spec</span><span class="p">),</span>
+                <span class="o">*</span><span class="n">sql_artifacts</span><span class="p">,</span>
+                <span class="n">op_name</span><span class="o">=</span><span class="n">func</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">new_function_artifact</span><span class="p">,</span> <span class="n">TableArtifact</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">new_function_artifact</span>
+
+        <span class="k">return</span> <span class="n">wrapped</span>
+
+    <span class="k">return</span> <span class="n">inner_decorator</span></div>
+
+
+<div class="viewcode-block" id="metric"><a class="viewcode-back" href="../../spiral.html#spiral.decorator.metric">[docs]</a><span class="k">def</span> <span class="nf">metric</span><span class="p">(</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DecoratedMetricFunction</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;A decorator that converts regular python functions into Spiral metrics.</span>
+
+<span class="sd">    The decorated python function can one panda Dataframes as arguments.</span>
+<span class="sd">    The requirements.txt file in the current directory is used. If no such file exists,</span>
+<span class="sd">    we will infer the requirements that the function needs.</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        # The metric name is inferred as the function name.</span>
+<span class="sd">        # The metric description is inferred as the docstring.</span>
+<span class="sd">        # You can also set these explicitly in the decorator. Eg. `@metric(desc=&quot;...&quot;)`</span>
+<span class="sd">        @metric()</span>
+<span class="sd">        def avg_churn(churn_table: pd.DataFrame) -&gt; float:</span>
+<span class="sd">            &#39;&#39;&#39;</span>
+<span class="sd">            The average predicted churn.</span>
+<span class="sd">            &#39;&#39;&#39;</span>
+<span class="sd">            return churn_table[&#39;pred_churn&#39;].mean()</span>
+
+<span class="sd">        # This churn_metric is a float</span>
+<span class="sd">        churn_metric: MetricArtifact = avg_churn(churn_table)</span>
+
+<span class="sd">        # Exception is raised if the bound or metric was misconfigured,</span>
+<span class="sd">        # or the bound is violated. A successful check will simply pass.</span>
+<span class="sd">        churn_metric.add_bound(</span>
+<span class="sd">            upper=0.4,</span>
+<span class="sd">            error_level: ErrorLevel = sp.ErrorLevel.WARN,</span>
+<span class="sd">        )</span>
+
+<span class="sd">        # This will run the metric computation on the current data.</span>
+<span class="sd">        print(churn_metric.to_val())</span>
+<span class="sd">        # This will print out the different bounds on this metric.</span>
+<span class="sd">        churn_metric.describe()</span>
+<span class="sd">        # Bounds can be removed by name.</span>
+<span class="sd">        churn_metric.remove_bound(&quot;avg_churn less than 0.4&quot;)</span>
+
+<span class="sd">        # All bounds on the specified metrics will be included.</span>
+<span class="sd">        churn_flow = sp_client.create_flow(</span>
+<span class="sd">                                        name=&quot;churn_ensemble&quot;,</span>
+<span class="sd">                                        artifacts=[churn_table],</span>
+<span class="sd">                                        metrics=[churn_metric], # All bounds on these metrics are included</span>
+<span class="sd">                                    )</span>
+
+
+<span class="sd">        churn_flow.test()</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        description:</span>
+<span class="sd">            A description for the metric.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># TODO: ENG-809 Infer metric description from docstring</span>
+    <span class="k">def</span> <span class="nf">inner_decorator</span><span class="p">(</span><span class="n">func</span><span class="p">:</span> <span class="n">MetricFunction</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MetricDecoratorFunction</span><span class="p">:</span>
+        <span class="c1"># wraps decorator:</span>
+        <span class="c1"># updates `wrapped()` to look like `func()` by</span>
+        <span class="c1"># copying attributes such as __name__, __doc__, etc.</span>
+        <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">wrapped</span><span class="p">(</span>
+            <span class="n">table_artifact</span><span class="p">:</span> <span class="n">TableArtifact</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MetricArtifact</span><span class="p">:</span>  <span class="c1"># TODO: ENG-810 Extend support to compute metrics on multiple tables</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Creates the following structure:</span>
+<span class="sd">            &lt;funcname&gt;_spiral_metric</span>
+<span class="sd">             - requirements.txt</span>
+<span class="sd">            Creates TableArtifact using &lt;funcname&gt;_spiral.zip as the function.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">dir_name</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;_spiral_metric&quot;</span>
+            <span class="n">delete_zip_folder_and_file</span><span class="p">(</span><span class="n">dir_name</span><span class="p">)</span>
+            <span class="n">zip_file_path</span> <span class="o">=</span> <span class="n">create_zip_file</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">dir_name</span><span class="p">)</span>
+
+            <span class="c1"># TODO: ENG-735 Support granularity=FunctionGranularity.TABLE &amp; granularity=FunctionGranularity.ROW</span>
+            <span class="n">function_spec</span> <span class="o">=</span> <span class="n">FunctionSpec</span><span class="p">(</span>
+                <span class="nb">type</span><span class="o">=</span><span class="n">FunctionType</span><span class="o">.</span><span class="n">FILE</span><span class="p">,</span>  <span class="c1"># TODO: ENG-811 Support type=FunctionType.GITHUB</span>
+                <span class="n">granularity</span><span class="o">=</span><span class="n">FunctionGranularity</span><span class="o">.</span><span class="n">TABLE</span><span class="p">,</span>
+                <span class="n">file_path</span><span class="o">=</span><span class="n">zip_file_path</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="n">metric_spec</span> <span class="o">=</span> <span class="n">MetricSpec</span><span class="p">(</span><span class="n">function</span><span class="o">=</span><span class="n">function_spec</span><span class="p">)</span>
+
+            <span class="n">new_metric_artifact</span> <span class="o">=</span> <span class="n">wrap_spec</span><span class="p">(</span>
+                <span class="n">OperatorSpec</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="n">metric_spec</span><span class="p">),</span>
+                <span class="n">table_artifact</span><span class="p">,</span>
+                <span class="n">op_name</span><span class="o">=</span><span class="n">func</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">new_metric_artifact</span><span class="p">,</span> <span class="n">MetricArtifact</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">new_metric_artifact</span>
+
+        <span class="k">return</span> <span class="n">wrapped</span>
+
+    <span class="k">return</span> <span class="n">inner_decorator</span></div>
+
+
+<div class="viewcode-block" id="validation_test"><a class="viewcode-back" href="../../spiral.html#spiral.decorator.validation_test">[docs]</a><span class="k">def</span> <span class="nf">validation_test</span><span class="p">(</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">blocking</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">file_dependencies</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DecoratedValidationTestFunction</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;A decorator that converts regular python functions into Spiral validation tests.</span>
+
+<span class="sd">    The decorated python function can take any number of panda Dataframes as arguments.</span>
+<span class="sd">    The requirements.txt file in the current directory is used. If no such file exists,</span>
+<span class="sd">    we will infer the requirements that the function needs.</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        @validation_test(</span>
+<span class="sd">            description=&quot;Check all churn scores are between 0 and 1 inclusive.&quot;,</span>
+<span class="sd">            blocking=True,</span>
+<span class="sd">        )</span>
+<span class="sd">        def check_churn_scores(df: pd.DataFrame):</span>
+<span class="sd">            return df[&quot;churn_pred&quot;] &gt;= 0 and df[&quot;churn_pred&quot;] &lt;= 1</span>
+
+<span class="sd">        customer_profiles = ...</span>
+<span class="sd">        passed, logs = check_churn_scores(customer_profiles)</span>
+<span class="sd">        assert passed, &quot;Churn scores were computed incorrectly&quot;</span>
+<span class="sd">        print(logs)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        description:</span>
+<span class="sd">            A description for what this test is doing.</span>
+<span class="sd">        blocking:</span>
+<span class="sd">            Whether this test failing should also fail the entire flow.</span>
+<span class="sd">        num_rows:</span>
+<span class="sd">            The number of rows to run the test on. Defaults to all rows.</span>
+<span class="sd">        file_dependencies:</span>
+<span class="sd">            A list of relative paths to files that the function needs to read.</span>
+<span class="sd">            Python classes/methods already imported within the function&#39;s file</span>
+<span class="sd">            need not be included.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">inner_decorator</span><span class="p">(</span>
+        <span class="n">func</span><span class="p">:</span> <span class="n">ValidationTestFunction</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ValidationTestDecoratorFunction</span><span class="p">:</span>
+        <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">wrapped</span><span class="p">(</span><span class="n">table_artifact</span><span class="p">:</span> <span class="n">TableArtifact</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Creates the following structure:</span>
+<span class="sd">            &lt;funcname&gt;_spiral_validation_test</span>
+<span class="sd">             - model.py</span>
+<span class="sd">             - model.pkl</span>
+<span class="sd">             - requirements.txt</span>
+<span class="sd">            Creates TableArtifact using &lt;funcname&gt;_spiral.zip as the function.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">dir_name</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;_spiral_validation_test&quot;</span>
+            <span class="n">delete_zip_folder_and_file</span><span class="p">(</span><span class="n">dir_name</span><span class="p">)</span>
+            <span class="n">zip_file_path</span> <span class="o">=</span> <span class="n">create_zip_file</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">dir_name</span><span class="p">,</span> <span class="n">file_dependencies</span><span class="p">)</span>
+            <span class="n">function_spec</span> <span class="o">=</span> <span class="n">FunctionSpec</span><span class="p">(</span>
+                <span class="nb">type</span><span class="o">=</span><span class="n">FunctionType</span><span class="o">.</span><span class="n">FILE</span><span class="p">,</span>
+                <span class="n">granularity</span><span class="o">=</span><span class="n">FunctionGranularity</span><span class="o">.</span><span class="n">TABLE</span><span class="p">,</span>
+                <span class="n">file_path</span><span class="o">=</span><span class="n">zip_file_path</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">table_artifact</span><span class="o">.</span><span class="n">_run_validation_test</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">func</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+                <span class="n">function_spec</span><span class="o">=</span><span class="n">function_spec</span><span class="p">,</span>
+                <span class="n">blocking</span><span class="o">=</span><span class="n">blocking</span><span class="p">,</span>
+                <span class="n">attach_to_dag</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">wrapped</span>
+
+    <span class="k">return</span> <span class="n">inner_decorator</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

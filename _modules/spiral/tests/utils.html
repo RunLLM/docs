@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.tests.utils &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../spiral.html">spiral package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>spiral.tests.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.tests.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+
+<span class="kn">from</span> <span class="nn">spiral.artifact</span> <span class="kn">import</span> <span class="n">Artifact</span><span class="p">,</span> <span class="n">ArtifactSpec</span>
+<span class="kn">from</span> <span class="nn">spiral.dag</span> <span class="kn">import</span> <span class="n">DAG</span><span class="p">,</span> <span class="n">Metadata</span>
+<span class="kn">from</span> <span class="nn">spiral.enums</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">FunctionType</span><span class="p">,</span>
+    <span class="n">FunctionGranularity</span><span class="p">,</span>
+    <span class="n">ValidationLevel</span><span class="p">,</span>
+    <span class="n">ServiceType</span><span class="p">,</span>
+    <span class="n">OperatorType</span><span class="p">,</span>
+    <span class="n">LoadUpdateMode</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">spiral.operators</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">OperatorSpec</span><span class="p">,</span>
+    <span class="n">ExtractSpec</span><span class="p">,</span>
+    <span class="n">RelationalDBExtractParams</span><span class="p">,</span>
+    <span class="n">FunctionSpec</span><span class="p">,</span>
+    <span class="n">ValidationSpec</span><span class="p">,</span>
+    <span class="n">LoadSpec</span><span class="p">,</span>
+    <span class="n">RelationalDBLoadParams</span><span class="p">,</span>
+    <span class="n">Operator</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">spiral.utils</span> <span class="kn">import</span> <span class="n">generate_uuid</span>
+
+
+<div class="viewcode-block" id="generate_uuids"><a class="viewcode-back" href="../../../spiral.tests.html#spiral.tests.utils.generate_uuids">[docs]</a><span class="k">def</span> <span class="nf">generate_uuids</span><span class="p">(</span><span class="n">num</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">]:</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">generate_uuid</span><span class="p">()</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num</span><span class="p">)]</span></div>
+
+
+<span class="k">def</span> <span class="nf">_construct_dag</span><span class="p">(</span>
+    <span class="n">operators</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Operator</span><span class="p">],</span>
+    <span class="n">artifacts</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Artifact</span><span class="p">],</span>
+<span class="p">):</span>
+    <span class="k">return</span> <span class="n">DAG</span><span class="p">(</span>
+        <span class="n">operators</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">id</span><span class="p">):</span> <span class="n">op</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">operators</span><span class="p">}},</span>
+        <span class="n">operator_by_name</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="p">{</span><span class="n">op</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">op</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">operators</span><span class="p">}},</span>
+        <span class="n">artifacts</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">artifact</span><span class="o">.</span><span class="n">id</span><span class="p">):</span> <span class="n">artifact</span> <span class="k">for</span> <span class="n">artifact</span> <span class="ow">in</span> <span class="n">artifacts</span><span class="p">}},</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="n">Metadata</span><span class="p">(),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_construct_operator</span><span class="p">(</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">,</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">operator_type</span><span class="p">:</span> <span class="n">OperatorType</span><span class="p">,</span>
+    <span class="n">inputs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">],</span>
+    <span class="n">outputs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">],</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Only sets the fields needed to figure out the DAG structure, not to actually execute the operator.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">operator_type</span> <span class="o">==</span> <span class="n">OperatorType</span><span class="o">.</span><span class="n">EXTRACT</span><span class="p">:</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">default_extract_spec</span><span class="p">()</span>
+
+    <span class="k">elif</span> <span class="n">operator_type</span> <span class="o">==</span> <span class="n">OperatorType</span><span class="o">.</span><span class="n">FUNCTION</span><span class="p">:</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">default_function_spec</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">operator_type</span> <span class="o">==</span> <span class="n">OperatorType</span><span class="o">.</span><span class="n">VALIDATION</span><span class="p">:</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">default_validation_spec</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">default_load_spec</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">Operator</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">spec</span><span class="o">=</span><span class="n">spec</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
+        <span class="n">outputs</span><span class="o">=</span><span class="n">outputs</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="default_extract_spec"><a class="viewcode-back" href="../../../spiral.tests.html#spiral.tests.utils.default_extract_spec">[docs]</a><span class="k">def</span> <span class="nf">default_extract_spec</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">OperatorSpec</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">OperatorSpec</span><span class="p">(</span>
+        <span class="n">extract</span><span class="o">=</span><span class="n">ExtractSpec</span><span class="p">(</span>
+            <span class="n">service</span><span class="o">=</span><span class="n">ServiceType</span><span class="o">.</span><span class="n">POSTGRES</span><span class="p">,</span>
+            <span class="n">integration_id</span><span class="o">=</span><span class="n">generate_uuid</span><span class="p">(),</span>
+            <span class="n">parameters</span><span class="o">=</span><span class="n">RelationalDBExtractParams</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;This is a SQL Query&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="default_function_spec"><a class="viewcode-back" href="../../../spiral.tests.html#spiral.tests.utils.default_function_spec">[docs]</a><span class="k">def</span> <span class="nf">default_function_spec</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">OperatorSpec</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">OperatorSpec</span><span class="p">(</span>
+        <span class="n">function</span><span class="o">=</span><span class="n">FunctionSpec</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">FunctionType</span><span class="o">.</span><span class="n">FILE</span><span class="p">,</span>
+            <span class="n">granularity</span><span class="o">=</span><span class="n">FunctionGranularity</span><span class="o">.</span><span class="n">TABLE</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="default_validation_spec"><a class="viewcode-back" href="../../../spiral.tests.html#spiral.tests.utils.default_validation_spec">[docs]</a><span class="k">def</span> <span class="nf">default_validation_spec</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">OperatorSpec</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">OperatorSpec</span><span class="p">(</span>
+        <span class="n">validation</span><span class="o">=</span><span class="n">ValidationSpec</span><span class="p">(</span>
+            <span class="n">level</span><span class="o">=</span><span class="n">ValidationLevel</span><span class="o">.</span><span class="n">ERROR</span><span class="p">,</span>
+            <span class="n">function</span><span class="o">=</span><span class="n">FunctionSpec</span><span class="p">(</span>
+                <span class="nb">type</span><span class="o">=</span><span class="n">FunctionType</span><span class="o">.</span><span class="n">FILE</span><span class="p">,</span>
+                <span class="n">granularity</span><span class="o">=</span><span class="n">FunctionGranularity</span><span class="o">.</span><span class="n">TABLE</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="default_load_spec"><a class="viewcode-back" href="../../../spiral.tests.html#spiral.tests.utils.default_load_spec">[docs]</a><span class="k">def</span> <span class="nf">default_load_spec</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">OperatorSpec</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">OperatorSpec</span><span class="p">(</span>
+        <span class="n">load</span><span class="o">=</span><span class="n">LoadSpec</span><span class="p">(</span>
+            <span class="n">service</span><span class="o">=</span><span class="n">ServiceType</span><span class="o">.</span><span class="n">POSTGRES</span><span class="p">,</span>
+            <span class="n">integration_id</span><span class="o">=</span><span class="n">generate_uuid</span><span class="p">(),</span>
+            <span class="n">parameters</span><span class="o">=</span><span class="n">RelationalDBLoadParams</span><span class="p">(</span><span class="n">table</span><span class="o">=</span><span class="s2">&quot;output&quot;</span><span class="p">,</span> <span class="n">update_mode</span><span class="o">=</span><span class="n">LoadUpdateMode</span><span class="o">.</span><span class="n">REPLACE</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="default_artifact"><a class="viewcode-back" href="../../../spiral.tests.html#spiral.tests.utils.default_artifact">[docs]</a><span class="k">def</span> <span class="nf">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Artifact</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">Artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">spec</span><span class="o">=</span><span class="n">ArtifactSpec</span><span class="p">(</span><span class="n">table</span><span class="o">=</span><span class="p">{}))</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

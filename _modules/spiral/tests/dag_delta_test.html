@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.tests.dag_delta_test &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../spiral.html">spiral package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>spiral.tests.dag_delta_test</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.tests.dag_delta_test</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+
+<span class="kn">from</span> <span class="nn">spiral.dag</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DAG</span><span class="p">,</span>
+    <span class="n">SubgraphDAGDelta</span><span class="p">,</span>
+    <span class="n">apply_deltas_to_dag</span><span class="p">,</span>
+    <span class="n">Metadata</span><span class="p">,</span>
+    <span class="n">AddOrReplaceOperatorDelta</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">spiral.enums</span> <span class="kn">import</span> <span class="n">OperatorType</span>
+<span class="kn">from</span> <span class="nn">spiral.tests.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">generate_uuids</span><span class="p">,</span>
+    <span class="n">default_artifact</span><span class="p">,</span>
+    <span class="n">_construct_operator</span><span class="p">,</span>
+    <span class="n">_construct_dag</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">spiral.utils</span> <span class="kn">import</span> <span class="n">generate_uuid</span>
+
+
+<div class="viewcode-block" id="test_add_and_replace_operator_delta"><a class="viewcode-back" href="../../../spiral.tests.html#spiral.tests.dag_delta_test.test_add_and_replace_operator_delta">[docs]</a><span class="k">def</span> <span class="nf">test_add_and_replace_operator_delta</span><span class="p">():</span>
+    <span class="n">extract_op_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">extract_artifact_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">fn_op_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">fn_artifact_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">load_op_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">extract_op</span> <span class="o">=</span> <span class="n">_construct_operator</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="n">extract_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Extract&quot;</span><span class="p">,</span>
+        <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">EXTRACT</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="p">[],</span>
+        <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+    <span class="p">)</span>
+    <span class="n">extract_artifact</span> <span class="o">=</span> <span class="n">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Extract Artifact&quot;</span><span class="p">)</span>
+
+    <span class="n">fn_op_0</span> <span class="o">=</span> <span class="n">_construct_operator</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="n">fn_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 0&quot;</span><span class="p">,</span>
+        <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">FUNCTION</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+        <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+    <span class="p">)</span>
+    <span class="n">fn_artifact_0</span> <span class="o">=</span> <span class="n">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 0 Artifact&quot;</span><span class="p">)</span>
+
+    <span class="n">fn_op_1</span> <span class="o">=</span> <span class="n">_construct_operator</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="n">fn_op_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 1&quot;</span><span class="p">,</span>
+        <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">FUNCTION</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+        <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+    <span class="p">)</span>
+    <span class="n">fn_artifact_1</span> <span class="o">=</span> <span class="n">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 1 Artifact&quot;</span><span class="p">)</span>
+
+    <span class="n">fn_op_2</span> <span class="o">=</span> <span class="n">_construct_operator</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="n">fn_op_ids</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 2&quot;</span><span class="p">,</span>
+        <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">FUNCTION</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+        <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span>
+    <span class="p">)</span>
+    <span class="n">fn_artifact_2</span> <span class="o">=</span> <span class="n">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 2 Artifact&quot;</span><span class="p">)</span>
+
+    <span class="n">load_fn_1</span> <span class="o">=</span> <span class="n">_construct_operator</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="n">load_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Load Function 1&quot;</span><span class="p">,</span>
+        <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">LOAD</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+        <span class="n">outputs</span><span class="o">=</span><span class="p">[],</span>
+    <span class="p">)</span>
+    <span class="n">load_fn_2</span> <span class="o">=</span> <span class="n">_construct_operator</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="n">load_op_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Load Function 2&quot;</span><span class="p">,</span>
+        <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">LOAD</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span>
+        <span class="n">outputs</span><span class="o">=</span><span class="p">[],</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Construct a multi-fn, branching DAG from nothing using this DAGDelta.</span>
+    <span class="n">dag</span> <span class="o">=</span> <span class="n">DAG</span><span class="p">(</span><span class="n">metadata</span><span class="o">=</span><span class="n">Metadata</span><span class="p">())</span>
+    <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+        <span class="n">dag</span><span class="p">,</span>
+        <span class="n">deltas</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">AddOrReplaceOperatorDelta</span><span class="p">(</span><span class="n">extract_op</span><span class="p">,</span> <span class="n">output_artifacts</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact</span><span class="p">]),</span>
+            <span class="n">AddOrReplaceOperatorDelta</span><span class="p">(</span><span class="n">fn_op_0</span><span class="p">,</span> <span class="n">output_artifacts</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_0</span><span class="p">]),</span>
+            <span class="n">AddOrReplaceOperatorDelta</span><span class="p">(</span><span class="n">fn_op_1</span><span class="p">,</span> <span class="n">output_artifacts</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_1</span><span class="p">]),</span>
+            <span class="n">AddOrReplaceOperatorDelta</span><span class="p">(</span><span class="n">fn_op_2</span><span class="p">,</span> <span class="n">output_artifacts</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_2</span><span class="p">]),</span>
+            <span class="n">AddOrReplaceOperatorDelta</span><span class="p">(</span><span class="n">load_fn_1</span><span class="p">,</span> <span class="n">output_artifacts</span><span class="o">=</span><span class="p">[]),</span>
+            <span class="n">AddOrReplaceOperatorDelta</span><span class="p">(</span><span class="n">load_fn_2</span><span class="p">,</span> <span class="n">output_artifacts</span><span class="o">=</span><span class="p">[]),</span>
+        <span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">dag</span> <span class="o">==</span> <span class="n">_construct_dag</span><span class="p">(</span>
+        <span class="n">operators</span><span class="o">=</span><span class="p">[</span><span class="n">extract_op</span><span class="p">,</span> <span class="n">fn_op_0</span><span class="p">,</span> <span class="n">fn_op_1</span><span class="p">,</span> <span class="n">fn_op_2</span><span class="p">,</span> <span class="n">load_fn_1</span><span class="p">,</span> <span class="n">load_fn_2</span><span class="p">],</span>
+        <span class="n">artifacts</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact</span><span class="p">,</span> <span class="n">fn_artifact_0</span><span class="p">,</span> <span class="n">fn_artifact_1</span><span class="p">,</span> <span class="n">fn_artifact_2</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Try replacing Function 2.</span>
+    <span class="n">fn_op_2_replacement_artifact_id</span> <span class="o">=</span> <span class="n">generate_uuid</span><span class="p">()</span>
+    <span class="n">fn_op_2_replacement</span> <span class="o">=</span> <span class="n">_construct_operator</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="n">generate_uuid</span><span class="p">(),</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 2&quot;</span><span class="p">,</span>
+        <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">FUNCTION</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+        <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_op_2_replacement_artifact_id</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">fn_artifact_3</span> <span class="o">=</span> <span class="n">default_artifact</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="n">fn_op_2_replacement_artifact_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 2 Replacement Artifact&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+        <span class="n">dag</span><span class="p">,</span>
+        <span class="n">deltas</span><span class="o">=</span><span class="p">[</span><span class="n">AddOrReplaceOperatorDelta</span><span class="p">(</span><span class="n">fn_op_2_replacement</span><span class="p">,</span> <span class="n">output_artifacts</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_3</span><span class="p">])],</span>
+    <span class="p">)</span>
+    <span class="k">assert</span> <span class="n">dag</span> <span class="o">==</span> <span class="n">_construct_dag</span><span class="p">(</span>
+        <span class="n">operators</span><span class="o">=</span><span class="p">[</span><span class="n">extract_op</span><span class="p">,</span> <span class="n">fn_op_0</span><span class="p">,</span> <span class="n">fn_op_1</span><span class="p">,</span> <span class="n">fn_op_2_replacement</span><span class="p">,</span> <span class="n">load_fn_1</span><span class="p">],</span>
+        <span class="n">artifacts</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact</span><span class="p">,</span> <span class="n">fn_artifact_0</span><span class="p">,</span> <span class="n">fn_artifact_1</span><span class="p">,</span> <span class="n">fn_artifact_3</span><span class="p">],</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="test_subgraph_dag_delta"><a class="viewcode-back" href="../../../spiral.tests.html#spiral.tests.dag_delta_test.test_subgraph_dag_delta">[docs]</a><span class="k">def</span> <span class="nf">test_subgraph_dag_delta</span><span class="p">():</span>
+    <span class="n">extract_op_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">extract_artifact_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">fn_op_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">fn_artifact_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">load_op_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">validation_op_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+    <span class="c1"># Basic DAG with two extract operators, feeding into the same single function.</span>
+    <span class="c1"># Every artifact has a validation.</span>
+    <span class="n">dag</span> <span class="o">=</span> <span class="n">_construct_dag</span><span class="p">(</span>
+        <span class="n">operators</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">extract_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Extract 0&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">EXTRACT</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+            <span class="p">),</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">extract_op_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Extract 1&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">EXTRACT</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+            <span class="p">),</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">fn_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 0&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">FUNCTION</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+            <span class="p">),</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">load_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Load 0&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">LOAD</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[],</span>
+            <span class="p">),</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">validation_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Extract 0 Validation&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">VALIDATION</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[],</span>
+            <span class="p">),</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">validation_op_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Extract 1 Validation&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">VALIDATION</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[],</span>
+            <span class="p">),</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">validation_op_ids</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 0 Validation&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">VALIDATION</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[],</span>
+            <span class="p">),</span>
+        <span class="p">],</span>
+        <span class="n">artifacts</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Extract 0 Artifact&quot;</span><span class="p">),</span>
+            <span class="n">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Extract 1 Artifact&quot;</span><span class="p">),</span>
+            <span class="n">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 0 Artifact&quot;</span><span class="p">),</span>
+        <span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_check_test_case</span><span class="p">(</span>
+        <span class="n">expected_dag</span><span class="p">:</span> <span class="n">DAG</span><span class="p">,</span> <span class="n">artifact_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">],</span> <span class="n">include_load_operators</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="p">):</span>
+        <span class="n">computed_dag</span> <span class="o">=</span> <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+            <span class="n">dag</span><span class="p">,</span>
+            <span class="n">deltas</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">SubgraphDAGDelta</span><span class="p">(</span>
+                    <span class="n">artifact_ids</span><span class="o">=</span><span class="n">artifact_ids</span><span class="p">,</span>
+                    <span class="n">include_validation_operators</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">include_load_operators</span><span class="o">=</span><span class="n">include_load_operators</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">],</span>
+            <span class="n">make_copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">assert</span> <span class="n">computed_dag</span> <span class="o">==</span> <span class="n">expected_dag</span>
+
+    <span class="c1"># Anchoring on the function artifact should return the entire dag.</span>
+    <span class="n">expected_dag</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">dag</span><span class="p">)</span>
+    <span class="n">_check_test_case</span><span class="p">(</span><span class="n">expected_dag</span><span class="p">,</span> <span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Check that excluding load operators works as expected.</span>
+    <span class="n">expected_dag</span><span class="o">.</span><span class="n">remove_operator</span><span class="p">(</span><span class="n">load_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">_check_test_case</span><span class="p">(</span><span class="n">expected_dag</span><span class="p">,</span> <span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># Anchoring on one of the extract artifacts should only return that extract artifact and its validation.</span>
+    <span class="n">expected_dag</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">dag</span><span class="p">)</span>
+    <span class="n">expected_dag</span><span class="o">.</span><span class="n">remove_operators</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">load_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">extract_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">fn_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">validation_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">validation_op_ids</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">_check_test_case</span><span class="p">(</span>
+        <span class="n">expected_dag</span><span class="p">,</span>
+        <span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+        <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Add an additional distinct path through the DAG (no validations)</span>
+    <span class="n">dag</span><span class="o">.</span><span class="n">add_operators</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">extract_op_ids</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Extract 2&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">EXTRACT</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span>
+            <span class="p">),</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">fn_op_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 1&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">FUNCTION</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+            <span class="p">),</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">load_op_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Load 1&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">LOAD</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[],</span>
+            <span class="p">),</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">dag</span><span class="o">.</span><span class="n">add_artifacts</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">default_artifact</span><span class="p">(</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Extract 2 Artifact&quot;</span><span class="p">),</span>
+            <span class="n">default_artifact</span><span class="p">(</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function 1 Artifact&quot;</span><span class="p">),</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Anchoring on the one of the branches will delete the other one completely.</span>
+    <span class="n">expected_dag</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">dag</span><span class="p">)</span>
+    <span class="n">expected_dag</span><span class="o">.</span><span class="n">remove_operators</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">extract_op_ids</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+            <span class="n">fn_op_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">load_op_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">_check_test_case</span><span class="p">(</span><span class="n">expected_dag</span><span class="p">,</span> <span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">expected_dag</span><span class="o">.</span><span class="n">remove_operator</span><span class="p">(</span><span class="n">load_op_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">_check_test_case</span><span class="p">(</span><span class="n">expected_dag</span><span class="p">,</span> <span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># Anchoring at the end of both branches will preserve the entire DAG.</span>
+    <span class="n">expected_dag</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">dag</span><span class="p">)</span>
+    <span class="n">_check_test_case</span><span class="p">(</span>
+        <span class="n">expected_dag</span><span class="p">,</span>
+        <span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+        <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">expected_dag</span><span class="o">.</span><span class="n">remove_operators</span><span class="p">(</span><span class="n">load_op_ids</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
+    <span class="n">_check_test_case</span><span class="p">(</span>
+        <span class="n">expected_dag</span><span class="p">,</span>
+        <span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+        <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Check that any non-terminal artifacts in the subgraph are handled</span>
+    <span class="n">_check_test_case</span><span class="p">(</span>
+        <span class="n">expected_dag</span><span class="p">,</span>
+        <span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+        <span class="p">],</span>
+        <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="test_apply_deltas_make_copy"><a class="viewcode-back" href="../../../spiral.tests.html#spiral.tests.dag_delta_test.test_apply_deltas_make_copy">[docs]</a><span class="k">def</span> <span class="nf">test_apply_deltas_make_copy</span><span class="p">():</span>
+    <span class="n">extract_op_id</span> <span class="o">=</span> <span class="n">generate_uuid</span><span class="p">()</span>
+    <span class="n">extract_artifact_id</span> <span class="o">=</span> <span class="n">generate_uuid</span><span class="p">()</span>
+    <span class="n">fn_op_id</span> <span class="o">=</span> <span class="n">generate_uuid</span><span class="p">()</span>
+    <span class="n">fn_artifact_id</span> <span class="o">=</span> <span class="n">generate_uuid</span><span class="p">()</span>
+    <span class="n">load_op_id</span> <span class="o">=</span> <span class="n">generate_uuid</span><span class="p">()</span>
+
+    <span class="n">dag</span> <span class="o">=</span> <span class="n">_construct_dag</span><span class="p">(</span>
+        <span class="n">operators</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">extract_op_id</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Extract&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">EXTRACT</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_id</span><span class="p">],</span>
+            <span class="p">),</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">fn_op_id</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">FUNCTION</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_id</span><span class="p">],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_id</span><span class="p">],</span>
+            <span class="p">),</span>
+            <span class="n">_construct_operator</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">load_op_id</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Load&quot;</span><span class="p">,</span>
+                <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">LOAD</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_id</span><span class="p">],</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="p">[],</span>
+            <span class="p">),</span>
+        <span class="p">],</span>
+        <span class="n">artifacts</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">extract_artifact_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Extract Artifact&quot;</span><span class="p">),</span>
+            <span class="n">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fn_artifact_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Function Artifact&quot;</span><span class="p">),</span>
+        <span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Check that the original DAG is not modified when make_copy=True</span>
+    <span class="n">computed_dag</span> <span class="o">=</span> <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+        <span class="n">dag</span><span class="p">,</span>
+        <span class="n">deltas</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">SubgraphDAGDelta</span><span class="p">(</span>
+                <span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_id</span><span class="p">],</span>
+                <span class="n">include_validation_operators</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">],</span>
+        <span class="n">make_copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">assert</span> <span class="n">computed_dag</span> <span class="o">!=</span> <span class="n">dag</span>
+
+    <span class="c1"># Check that the original DAG is modified when make_copy=False</span>
+    <span class="n">computed_dag</span> <span class="o">=</span> <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+        <span class="n">dag</span><span class="p">,</span>
+        <span class="n">deltas</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">SubgraphDAGDelta</span><span class="p">(</span>
+                <span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_id</span><span class="p">],</span>
+                <span class="n">include_validation_operators</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">],</span>
+        <span class="n">make_copy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">assert</span> <span class="n">computed_dag</span> <span class="o">==</span> <span class="n">dag</span></div>
+
+
+<div class="viewcode-block" id="test_metrics_subgraph_dag_delta"><a class="viewcode-back" href="../../../spiral.tests.html#spiral.tests.dag_delta_test.test_metrics_subgraph_dag_delta">[docs]</a><span class="k">def</span> <span class="nf">test_metrics_subgraph_dag_delta</span><span class="p">():</span>
+    <span class="n">extract_n</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">extract_op_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="n">extract_n</span><span class="p">)</span>
+    <span class="n">extract_artifact_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="n">extract_n</span><span class="p">)</span>
+    <span class="n">fn_n</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="n">fn_op_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="n">fn_n</span><span class="p">)</span>
+    <span class="n">fn_artifact_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="n">fn_n</span><span class="p">)</span>
+    <span class="n">metric_n</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">metric_op_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="n">metric_n</span><span class="p">)</span>
+    <span class="n">metric_artifact_ids</span> <span class="o">=</span> <span class="n">generate_uuids</span><span class="p">(</span><span class="n">metric_n</span><span class="p">)</span>
+
+    <span class="n">extract_artifacts</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Extract </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> Artifact&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">extract_n</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">fn_artifacts</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Function </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> Artifact&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">fn_n</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">metric_artifacts</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">default_artifact</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">metric_artifact_ids</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Metric </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> Artifact&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">metric_n</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="n">extract_ops</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">_construct_operator</span><span class="p">(</span>
+            <span class="nb">id</span><span class="o">=</span><span class="n">extract_op_ids</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+            <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Extract </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">EXTRACT</span><span class="p">,</span>
+            <span class="n">inputs</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">extract_n</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">fn_ops</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">_construct_operator</span><span class="p">(</span>
+            <span class="nb">id</span><span class="o">=</span><span class="n">fn_op_ids</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+            <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Function </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">FUNCTION</span><span class="p">,</span>
+            <span class="n">inputs</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">fn_n</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">metric_ops</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">_construct_operator</span><span class="p">(</span>
+            <span class="nb">id</span><span class="o">=</span><span class="n">metric_op_ids</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+            <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Metric </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">operator_type</span><span class="o">=</span><span class="n">OperatorType</span><span class="o">.</span><span class="n">METRIC</span><span class="p">,</span>
+            <span class="n">inputs</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="n">metric_artifact_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">metric_n</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="c1"># Fill out the inputs</span>
+    <span class="n">fn_ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">fn_ops</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">fn_ops</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">fn_ops</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">fn_ops</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">fn_ops</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">fn_ops</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+    <span class="n">fn_ops</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+    <span class="n">fn_ops</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+    <span class="n">fn_ops</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">6</span><span class="p">])</span>
+    <span class="n">metric_ops</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">7</span><span class="p">])</span>
+    <span class="n">fn_ops</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">8</span><span class="p">])</span>
+    <span class="n">metric_ops</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="mi">8</span><span class="p">])</span>
+
+    <span class="c1"># DAG</span>
+    <span class="c1"># - 1 subgraph with metric at a terminal node</span>
+    <span class="c1">#   with 2 branch feeding into it</span>
+    <span class="c1">#   and 1 branch unrelated to it</span>
+    <span class="c1"># - 1 linear subgraph with metric not at the terminal node</span>
+    <span class="c1">#</span>
+    <span class="c1"># e0 - f0 - f1 - f2</span>
+    <span class="c1">#    \ f3 - f4 \</span>
+    <span class="c1">#    \ f5 - f6 - f7 - m0</span>
+    <span class="c1">#</span>
+    <span class="c1"># e1 - f8 - f9</span>
+    <span class="c1">#         \ m1</span>
+    <span class="n">dag</span> <span class="o">=</span> <span class="n">_construct_dag</span><span class="p">(</span>
+        <span class="n">operators</span><span class="o">=</span><span class="n">extract_ops</span> <span class="o">+</span> <span class="n">fn_ops</span> <span class="o">+</span> <span class="n">metric_ops</span><span class="p">,</span>
+        <span class="n">artifacts</span><span class="o">=</span><span class="n">extract_artifacts</span> <span class="o">+</span> <span class="n">fn_artifacts</span> <span class="o">+</span> <span class="n">metric_artifacts</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">metric_check</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;extract&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="s2">&quot;fn&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;extract&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="s2">&quot;fn&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">8</span><span class="p">],</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+
+    <span class="n">check_artifacts</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">metric_artifact_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">metric_artifact_ids</span><span class="p">[</span><span class="n">i</span><span class="p">])]</span>
+            <span class="o">+</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">extract_artifact_ids</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">metric_check</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;extract&quot;</span><span class="p">]]</span>
+            <span class="o">+</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">fn_artifact_ids</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">metric_check</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;fn&quot;</span><span class="p">]]</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">metric_check</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+    <span class="p">}</span>
+
+    <span class="n">check_ops</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">metric_artifact_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">metric_op_ids</span><span class="p">[</span><span class="n">i</span><span class="p">])]</span>
+            <span class="o">+</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">extract_op_ids</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">metric_check</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;extract&quot;</span><span class="p">]]</span>
+            <span class="o">+</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">fn_op_ids</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">metric_check</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;fn&quot;</span><span class="p">]]</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">metric_check</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">metric_n</span><span class="p">):</span>
+        <span class="n">sub_dag</span> <span class="o">=</span> <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+            <span class="n">dag</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">SubgraphDAGDelta</span><span class="p">(</span><span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span><span class="n">metric_artifact_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]])],</span>
+            <span class="n">make_copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">correct_artifacts</span> <span class="o">=</span> <span class="n">check_artifacts</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">metric_artifact_ids</span><span class="p">[</span><span class="n">i</span><span class="p">])]</span>
+        <span class="n">actual_artifacts</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">artifact</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="k">for</span> <span class="n">artifact</span> <span class="ow">in</span> <span class="n">sub_dag</span><span class="o">.</span><span class="n">list_artifacts</span><span class="p">()])</span>
+        <span class="k">assert</span> <span class="n">actual_artifacts</span> <span class="o">==</span> <span class="n">correct_artifacts</span>
+
+        <span class="n">correct_ops</span> <span class="o">=</span> <span class="n">check_ops</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">metric_artifact_ids</span><span class="p">[</span><span class="n">i</span><span class="p">])]</span>
+        <span class="n">actual_ops</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">sub_dag</span><span class="o">.</span><span class="n">list_operators</span><span class="p">()])</span>
+        <span class="k">assert</span> <span class="n">actual_ops</span> <span class="o">==</span> <span class="n">correct_ops</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

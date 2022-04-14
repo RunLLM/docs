@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.enums &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spiral.enums</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.enums</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">EnumMeta</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">All these enums can be replaced with protobufs for consistency with the backend.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="MetaEnum"><a class="viewcode-back" href="../../spiral.html#spiral.enums.MetaEnum">[docs]</a><span class="k">class</span> <span class="nc">MetaEnum</span><span class="p">(</span><span class="n">EnumMeta</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Allows to very easily check if strings are present in the enum, without a helper.</span>
+
+<span class="sd">    Eg.</span>
+<span class="sd">        if &quot;Postgres&quot; in ServiceType:</span>
+<span class="sd">            ...</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__contains__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">item</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">item</span> <span class="ow">in</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">cast</span><span class="p">(</span><span class="n">Iterable</span><span class="p">[</span><span class="n">Enum</span><span class="p">],</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__members__</span><span class="o">.</span><span class="n">values</span><span class="p">())]</span></div>
+
+
+<div class="viewcode-block" id="FunctionType"><a class="viewcode-back" href="../../spiral.html#spiral.enums.FunctionType">[docs]</a><span class="k">class</span> <span class="nc">FunctionType</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="n">FILE</span> <span class="o">=</span> <span class="s2">&quot;file&quot;</span>
+    <span class="n">CODE</span> <span class="o">=</span> <span class="s2">&quot;code&quot;</span>
+    <span class="n">GITHUB</span> <span class="o">=</span> <span class="s2">&quot;github&quot;</span>
+    <span class="n">BUILTIN</span> <span class="o">=</span> <span class="s2">&quot;built_in&quot;</span></div>
+
+
+<div class="viewcode-block" id="FunctionGranularity"><a class="viewcode-back" href="../../spiral.html#spiral.enums.FunctionGranularity">[docs]</a><span class="k">class</span> <span class="nc">FunctionGranularity</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="n">TABLE</span> <span class="o">=</span> <span class="s2">&quot;table&quot;</span>
+    <span class="n">ROW</span> <span class="o">=</span> <span class="s2">&quot;row&quot;</span></div>
+
+
+<div class="viewcode-block" id="ValidationLevel"><a class="viewcode-back" href="../../spiral.html#spiral.enums.ValidationLevel">[docs]</a><span class="k">class</span> <span class="nc">ValidationLevel</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An ERROR severity will fail the flow.&quot;&quot;&quot;</span>
+
+    <span class="n">WARNING</span> <span class="o">=</span> <span class="s2">&quot;warning&quot;</span>
+    <span class="n">ERROR</span> <span class="o">=</span> <span class="s2">&quot;error&quot;</span></div>
+
+
+<div class="viewcode-block" id="OperatorType"><a class="viewcode-back" href="../../spiral.html#spiral.enums.OperatorType">[docs]</a><span class="k">class</span> <span class="nc">OperatorType</span><span class="p">(</span><span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="n">EXTRACT</span> <span class="o">=</span> <span class="s2">&quot;extract&quot;</span>
+    <span class="n">LOAD</span> <span class="o">=</span> <span class="s2">&quot;load&quot;</span>
+    <span class="n">FUNCTION</span> <span class="o">=</span> <span class="s2">&quot;function&quot;</span>
+    <span class="n">VALIDATION</span> <span class="o">=</span> <span class="s2">&quot;validation&quot;</span>
+    <span class="n">METRIC</span> <span class="o">=</span> <span class="s2">&quot;metric&quot;</span></div>
+
+
+<div class="viewcode-block" id="TriggerType"><a class="viewcode-back" href="../../spiral.html#spiral.enums.TriggerType">[docs]</a><span class="k">class</span> <span class="nc">TriggerType</span><span class="p">(</span><span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="n">MANUAL</span> <span class="o">=</span> <span class="s2">&quot;manual&quot;</span>
+    <span class="n">PERIODIC</span> <span class="o">=</span> <span class="s2">&quot;periodic&quot;</span></div>
+
+
+<div class="viewcode-block" id="ServiceType"><a class="viewcode-back" href="../../spiral.html#spiral.enums.ServiceType">[docs]</a><span class="k">class</span> <span class="nc">ServiceType</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="n">POSTGRES</span> <span class="o">=</span> <span class="s2">&quot;Postgres&quot;</span>
+    <span class="n">SNOWFLAKE</span> <span class="o">=</span> <span class="s2">&quot;Snowflake&quot;</span>
+    <span class="n">MYSQL</span> <span class="o">=</span> <span class="s2">&quot;MySQL&quot;</span>
+    <span class="n">REDSHIFT</span> <span class="o">=</span> <span class="s2">&quot;Redshift&quot;</span>
+    <span class="n">MARIADB</span> <span class="o">=</span> <span class="s2">&quot;MariaDB&quot;</span>
+    <span class="n">SQLSERVER</span> <span class="o">=</span> <span class="s2">&quot;SQL Server&quot;</span>
+    <span class="n">BIGQUERY</span> <span class="o">=</span> <span class="s2">&quot;BigQuery&quot;</span>
+    <span class="n">SPIRALDEMO</span> <span class="o">=</span> <span class="s2">&quot;Spiral Demo&quot;</span>
+    <span class="n">GITHUB</span> <span class="o">=</span> <span class="s2">&quot;Github&quot;</span>
+    <span class="n">SALESFORCE</span> <span class="o">=</span> <span class="s2">&quot;Salesforce&quot;</span>
+    <span class="n">GOOGLE_SHEETS</span> <span class="o">=</span> <span class="s2">&quot;Google Sheets&quot;</span>
+    <span class="n">S3</span> <span class="o">=</span> <span class="s2">&quot;S3&quot;</span></div>
+
+
+<div class="viewcode-block" id="RelationalDBServices"><a class="viewcode-back" href="../../spiral.html#spiral.enums.RelationalDBServices">[docs]</a><span class="k">class</span> <span class="nc">RelationalDBServices</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="n">POSTGRES</span> <span class="o">=</span> <span class="s2">&quot;Postgres&quot;</span>
+    <span class="n">SNOWFLAKE</span> <span class="o">=</span> <span class="s2">&quot;Snowflake&quot;</span>
+    <span class="n">MYSQL</span> <span class="o">=</span> <span class="s2">&quot;MySQL&quot;</span>
+    <span class="n">REDSHIFT</span> <span class="o">=</span> <span class="s2">&quot;Redshift&quot;</span>
+    <span class="n">MARIADB</span> <span class="o">=</span> <span class="s2">&quot;MariaDB&quot;</span>
+    <span class="n">SQLSERVER</span> <span class="o">=</span> <span class="s2">&quot;SQL Server&quot;</span>
+    <span class="n">BIGQUERY</span> <span class="o">=</span> <span class="s2">&quot;BigQuery&quot;</span>
+    <span class="n">SPIRALDEMO</span> <span class="o">=</span> <span class="s2">&quot;Spiral Demo&quot;</span></div>
+
+
+<div class="viewcode-block" id="ExecutionStatus"><a class="viewcode-back" href="../../spiral.html#spiral.enums.ExecutionStatus">[docs]</a><span class="k">class</span> <span class="nc">ExecutionStatus</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="n">SUCCEEDED</span> <span class="o">=</span> <span class="s2">&quot;succeeded&quot;</span>
+    <span class="n">FAILED</span> <span class="o">=</span> <span class="s2">&quot;failed&quot;</span>
+    <span class="n">PENDING</span> <span class="o">=</span> <span class="s2">&quot;pending&quot;</span></div>
+
+
+<div class="viewcode-block" id="SalesforceExtractType"><a class="viewcode-back" href="../../spiral.html#spiral.enums.SalesforceExtractType">[docs]</a><span class="k">class</span> <span class="nc">SalesforceExtractType</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="n">SEARCH</span> <span class="o">=</span> <span class="s2">&quot;search&quot;</span>
+    <span class="n">QUERY</span> <span class="o">=</span> <span class="s2">&quot;query&quot;</span></div>
+
+
+<div class="viewcode-block" id="S3FileFormat"><a class="viewcode-back" href="../../spiral.html#spiral.enums.S3FileFormat">[docs]</a><span class="k">class</span> <span class="nc">S3FileFormat</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="n">CSV</span> <span class="o">=</span> <span class="s2">&quot;CSV&quot;</span>
+    <span class="n">JSON</span> <span class="o">=</span> <span class="s2">&quot;JSON&quot;</span>
+    <span class="n">PARQUET</span> <span class="o">=</span> <span class="s2">&quot;Parquet&quot;</span></div>
+
+
+<div class="viewcode-block" id="LoadUpdateMode"><a class="viewcode-back" href="../../spiral.html#spiral.enums.LoadUpdateMode">[docs]</a><span class="k">class</span> <span class="nc">LoadUpdateMode</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="n">APPEND</span> <span class="o">=</span> <span class="s2">&quot;append&quot;</span>
+    <span class="n">REPLACE</span> <span class="o">=</span> <span class="s2">&quot;replace&quot;</span>
+    <span class="n">FAIL</span> <span class="o">=</span> <span class="s2">&quot;fail&quot;</span></div>
+
+
+<div class="viewcode-block" id="GoogleSheetsSaveMode"><a class="viewcode-back" href="../../spiral.html#spiral.enums.GoogleSheetsSaveMode">[docs]</a><span class="k">class</span> <span class="nc">GoogleSheetsSaveMode</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="n">OVERWRITE</span> <span class="o">=</span> <span class="s2">&quot;overwrite&quot;</span>
+    <span class="n">NEWSHEET</span> <span class="o">=</span> <span class="s2">&quot;newsheet&quot;</span>
+    <span class="n">CREATE</span> <span class="o">=</span> <span class="s2">&quot;create&quot;</span></div>
+
+
+<div class="viewcode-block" id="GithubRepoConfigContentType"><a class="viewcode-back" href="../../spiral.html#spiral.enums.GithubRepoConfigContentType">[docs]</a><span class="k">class</span> <span class="nc">GithubRepoConfigContentType</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">MetaEnum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Github repo config (.aqconfig) content type.&quot;&quot;&quot;</span>
+
+    <span class="n">OPERATOR</span> <span class="o">=</span> <span class="s2">&quot;operator&quot;</span>
+    <span class="n">QUERY</span> <span class="o">=</span> <span class="s2">&quot;query&quot;</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

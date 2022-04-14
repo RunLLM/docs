@@ -1,0 +1,53 @@
+spiral.integrations package
+===========================
+
+Submodules
+----------
+
+spiral.integrations.google\_sheets\_integration module
+------------------------------------------------------
+
+.. automodule:: spiral.integrations.google_sheets_integration
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.integrations.integration module
+--------------------------------------
+
+.. automodule:: spiral.integrations.integration
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.integrations.s3\_integration module
+------------------------------------------
+
+.. automodule:: spiral.integrations.s3_integration
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.integrations.salesforce\_integration module
+--------------------------------------------------
+
+.. automodule:: spiral.integrations.salesforce_integration
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spiral.integrations.sql\_integration module
+-------------------------------------------
+
+.. automodule:: spiral.integrations.sql_integration
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: spiral.integrations
+   :members:
+   :undoc-members:
+   :show-inheritance:

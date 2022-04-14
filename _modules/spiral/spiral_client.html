@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.spiral_client &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spiral.spiral_client</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.spiral_client</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span> <span class="nn">.generic_artifact</span> <span class="kn">import</span> <span class="n">Artifact</span>
+
+<span class="kn">from</span> <span class="nn">.api_client</span> <span class="kn">import</span> <span class="n">APIClient</span>
+<span class="kn">from</span> <span class="nn">.dag</span> <span class="kn">import</span> <span class="n">DAG</span><span class="p">,</span> <span class="n">apply_deltas_to_dag</span><span class="p">,</span> <span class="n">SubgraphDAGDelta</span><span class="p">,</span> <span class="n">Metadata</span>
+<span class="kn">from</span> <span class="nn">.enums</span> <span class="kn">import</span> <span class="n">ServiceType</span><span class="p">,</span> <span class="n">RelationalDBServices</span>
+<span class="kn">from</span> <span class="nn">.error</span> <span class="kn">import</span> <span class="n">InvalidIntegrationException</span><span class="p">,</span> <span class="n">IncompleteFlowException</span>
+<span class="kn">from</span> <span class="nn">.flow</span> <span class="kn">import</span> <span class="n">Flow</span>
+<span class="kn">from</span> <span class="nn">.github</span> <span class="kn">import</span> <span class="n">Github</span>
+<span class="kn">from</span> <span class="nn">.integrations.integration</span> <span class="kn">import</span> <span class="n">IntegrationInfo</span>
+<span class="kn">from</span> <span class="nn">.integrations.sql_integration</span> <span class="kn">import</span> <span class="n">RelationalDBIntegration</span>
+<span class="kn">from</span> <span class="nn">.integrations.salesforce_integration</span> <span class="kn">import</span> <span class="n">SalesforceIntegration</span>
+<span class="kn">from</span> <span class="nn">.integrations.google_sheets_integration</span> <span class="kn">import</span> <span class="n">GoogleSheetsIntegration</span>
+<span class="kn">from</span> <span class="nn">.integrations.s3_integration</span> <span class="kn">import</span> <span class="n">S3Integration</span>
+<span class="kn">from</span> <span class="nn">.table_artifact</span> <span class="kn">import</span> <span class="n">TableArtifact</span>
+<span class="kn">from</span> <span class="nn">.metric_artifact</span> <span class="kn">import</span> <span class="n">MetricArtifact</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">schedule_from_cron_string</span>
+
+
+<div class="viewcode-block" id="SpiralClient"><a class="viewcode-back" href="../../spiral.html#spiral.spiral_client.SpiralClient">[docs]</a><span class="k">class</span> <span class="nc">SpiralClient</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This class allows users to interact with flows on their Spiral cluster.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">email</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">spiral_address</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">use_https</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates an instance of SpiralClient.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            email:</span>
+<span class="sd">                The email used with Spiral Account.</span>
+<span class="sd">            api_key:</span>
+<span class="sd">                The user unique API key provided by Spiral.</span>
+<span class="sd">            spiral_address:</span>
+<span class="sd">                The address of the Spiral Gateway service.</span>
+<span class="sd">            use_https:</span>
+<span class="sd">                A boolean indicating whether the client is interacting with a</span>
+<span class="sd">                https cluster.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A SpiralClient instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span> <span class="o">=</span> <span class="n">APIClient</span><span class="p">(</span><span class="n">email</span><span class="p">,</span> <span class="n">api_key</span><span class="p">,</span> <span class="n">spiral_address</span><span class="p">,</span> <span class="n">use_https</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connected_integrations</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span>
+            <span class="nb">str</span><span class="p">,</span> <span class="n">IntegrationInfo</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="o">.</span><span class="n">list_integrations</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span> <span class="o">=</span> <span class="n">DAG</span><span class="p">(</span><span class="n">metadata</span><span class="o">=</span><span class="n">Metadata</span><span class="p">())</span>
+
+<div class="viewcode-block" id="SpiralClient.github"><a class="viewcode-back" href="../../spiral.html#spiral.spiral_client.SpiralClient.github">[docs]</a>    <span class="k">def</span> <span class="nf">github</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repo</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">branch</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Github</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Retrieves a Github object connecting to specified repos and branch.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            repo:</span>
+<span class="sd">                The full github repo URL, e.g. &quot;spiral/spiral-python&quot;</span>
+<span class="sd">            branch:</span>
+<span class="sd">                Optional branch name. The default main branch will be used if not specified.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The Github object</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            You could only connect to public repo if you didn&#39;t connect your github account to Spiral.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Github</span><span class="p">(</span><span class="n">client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="p">,</span> <span class="n">repo_url</span><span class="o">=</span><span class="n">repo</span><span class="p">,</span> <span class="n">branch</span><span class="o">=</span><span class="n">branch</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpiralClient.list_integrations"><a class="viewcode-back" href="../../spiral.html#spiral.spiral_client.SpiralClient.list_integrations">[docs]</a>    <span class="k">def</span> <span class="nf">list_integrations</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">IntegrationInfo</span><span class="p">]:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connected_integrations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="o">.</span><span class="n">list_integrations</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connected_integrations</span></div>
+
+<div class="viewcode-block" id="SpiralClient.integration"><a class="viewcode-back" href="../../spiral.html#spiral.spiral_client.SpiralClient.integration">[docs]</a>    <span class="k">def</span> <span class="nf">integration</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span>
+        <span class="n">SalesforceIntegration</span><span class="p">,</span>
+        <span class="n">S3Integration</span><span class="p">,</span>
+        <span class="n">GoogleSheetsIntegration</span><span class="p">,</span>
+        <span class="n">RelationalDBIntegration</span><span class="p">,</span>
+    <span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Retrieves a connected integration object.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            name:</span>
+<span class="sd">                The name of the integration</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The integration object</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            InvalidIntegrationException:</span>
+<span class="sd">                An error occurred because the cluster is not connected to the</span>
+<span class="sd">                provided integration or the provided integration is of an</span>
+<span class="sd">                incompatible type.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connected_integrations</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">InvalidIntegrationException</span><span class="p">(</span><span class="s2">&quot;Not connected to integration </span><span class="si">%s</span><span class="s2">!&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+
+        <span class="n">integration_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connected_integrations</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">integration_info</span><span class="o">.</span><span class="n">service</span> <span class="ow">in</span> <span class="n">RelationalDBServices</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">RelationalDBIntegration</span><span class="p">(</span>
+                <span class="n">api_client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="p">,</span>
+                <span class="n">dag</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span>
+                <span class="n">metadata</span><span class="o">=</span><span class="n">integration_info</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">integration_info</span><span class="o">.</span><span class="n">service</span> <span class="o">==</span> <span class="n">ServiceType</span><span class="o">.</span><span class="n">SALESFORCE</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">SalesforceIntegration</span><span class="p">(</span>
+                <span class="n">api_client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="p">,</span>
+                <span class="n">dag</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span>
+                <span class="n">metadata</span><span class="o">=</span><span class="n">integration_info</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">integration_info</span><span class="o">.</span><span class="n">service</span> <span class="o">==</span> <span class="n">ServiceType</span><span class="o">.</span><span class="n">GOOGLE_SHEETS</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">GoogleSheetsIntegration</span><span class="p">(</span>
+                <span class="n">api_client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="p">,</span>
+                <span class="n">dag</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span>
+                <span class="n">metadata</span><span class="o">=</span><span class="n">integration_info</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">integration_info</span><span class="o">.</span><span class="n">service</span> <span class="o">==</span> <span class="n">ServiceType</span><span class="o">.</span><span class="n">S3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">S3Integration</span><span class="p">(</span>
+                <span class="n">api_client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="p">,</span>
+                <span class="n">dag</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span>
+                <span class="n">metadata</span><span class="o">=</span><span class="n">integration_info</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidIntegrationException</span><span class="p">(</span>
+                <span class="s2">&quot;This method does not support loading integration of type </span><span class="si">%s</span><span class="s2">&quot;</span>
+                <span class="o">%</span> <span class="n">integration_info</span><span class="o">.</span><span class="n">service</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpiralClient.create_flow"><a class="viewcode-back" href="../../spiral.html#spiral.spiral_client.SpiralClient.create_flow">[docs]</a>    <span class="k">def</span> <span class="nf">create_flow</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">schedule</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">artifacts</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">TableArtifact</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">metrics</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">MetricArtifact</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Flow</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Creates a brand new flow object that generates the given artifacts.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            artifacts:</span>
+<span class="sd">                All these artifacts will be generated by the flow. Additional artifacts may also</span>
+<span class="sd">                be created as intermediate computation steps.</span>
+<span class="sd">            name:</span>
+<span class="sd">                The name of the newly created flow.</span>
+<span class="sd">            description:</span>
+<span class="sd">                A description for the new flow.</span>
+<span class="sd">            schedule: A cron expression specifying the cadence that this flow</span>
+<span class="sd">                will run on. If empty, the flow will only execute manually.</span>
+
+<span class="sd">                Eg. to run at the top of every hour:</span>
+<span class="sd">                schedule = &quot;0 * * * *&quot; or</span>
+<span class="sd">                schedule = spiral.hourly(minute: 0)</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            InvalidCronStringException:</span>
+<span class="sd">                An error occurred because the supplied cron string is invalid.</span>
+<span class="sd">            IncompleteFlowException:</span>
+<span class="sd">                An error occurred because the flow is missing some required</span>
+<span class="sd">                fields or operators.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            IncompleteFlowException:</span>
+<span class="sd">                An error occurred because the flow is missing some required</span>
+<span class="sd">                fields or operators.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A new flow object with the given name and description, but that is otherwise empty.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">artifacts</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">artifacts</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">artifacts</span>
+        <span class="n">metrics</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">metrics</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">metrics</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">artifacts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IncompleteFlowException</span><span class="p">(</span>
+                <span class="s2">&quot;Must supply at least one output artifact when creating a flow.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">cron_schedule</span> <span class="o">=</span> <span class="n">schedule_from_cron_string</span><span class="p">(</span><span class="n">schedule</span><span class="p">)</span>
+        <span class="n">dag</span> <span class="o">=</span> <span class="n">apply_deltas_to_dag</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dag</span><span class="p">,</span>
+            <span class="n">deltas</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">SubgraphDAGDelta</span><span class="p">(</span>
+                    <span class="n">artifact_ids</span><span class="o">=</span><span class="p">[</span><span class="n">artifact</span><span class="o">.</span><span class="n">id</span><span class="p">()</span> <span class="k">for</span> <span class="n">artifact</span> <span class="ow">in</span> <span class="n">artifacts</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="p">[</span><span class="n">artifact</span><span class="o">.</span><span class="n">id</span><span class="p">()</span> <span class="k">for</span> <span class="n">artifact</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">],</span>
+                    <span class="n">include_validation_operators</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">include_load_operators</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">],</span>
+            <span class="n">make_copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">dag</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">Metadata</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">schedule</span><span class="o">=</span><span class="n">cron_schedule</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">Flow</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="p">,</span>
+            <span class="n">connected_integrations</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_connected_integrations</span><span class="p">,</span>
+            <span class="n">dag</span><span class="o">=</span><span class="n">dag</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpiralClient.delete_flow"><a class="viewcode-back" href="../../spiral.html#spiral.spiral_client.SpiralClient.delete_flow">[docs]</a>    <span class="k">def</span> <span class="nf">delete_flow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Deletes a flow object.</span>
+
+<span class="sd">        TODO(ENG-410): This method gives no indication as to whether the flow</span>
+<span class="sd">         was successfully deleted.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            flow_id:</span>
+<span class="sd">                The id of the workflow to delete (not the name)</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            InvalidRequestError:</span>
+<span class="sd">                An error occurred when attempting to fetch the workflow to</span>
+<span class="sd">                delete. The provided `flow_id` may be malformed.</span>
+<span class="sd">            InternalServerError:</span>
+<span class="sd">                An unexpected error occurred within the Spiral cluster.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="o">.</span><span class="n">delete_workflow</span><span class="p">(</span><span class="n">flow_id</span><span class="p">)</span></div>
+
+    <span class="c1"># TODO: This is only meant for our SDK integration tests to use, since we don&#39;t publicly support fetching</span>
+    <span class="c1">#  an existing flow through the SDK.</span>
+    <span class="k">def</span> <span class="nf">_get_flow_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api_client</span><span class="o">.</span><span class="n">get_workflow</span><span class="p">(</span><span class="n">flow_id</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

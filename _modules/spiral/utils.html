@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spiral.utils &mdash; aqueduct 0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> aqueduct
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">aqueduct</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spiral.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spiral.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">import</span> <span class="nn">ipynbname</span>
+<span class="kn">import</span> <span class="nn">cloudpickle</span> <span class="k">as</span> <span class="nn">cp</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">from</span> <span class="nn">croniter</span> <span class="kn">import</span> <span class="n">croniter</span>
+
+<span class="kn">from</span> <span class="nn">.dag</span> <span class="kn">import</span> <span class="n">DAG</span><span class="p">,</span> <span class="n">Schedule</span>
+<span class="kn">from</span> <span class="nn">.enums</span> <span class="kn">import</span> <span class="n">TriggerType</span>
+<span class="kn">from</span> <span class="nn">.error</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.templates</span> <span class="kn">import</span> <span class="n">op_file_content</span>
+
+<span class="c1"># Auth headers</span>
+<span class="n">EMAIL_HEADER</span> <span class="o">=</span> <span class="s2">&quot;email&quot;</span>
+<span class="n">API_KEY_HEADER</span> <span class="o">=</span> <span class="s2">&quot;api-key&quot;</span>
+
+
+<div class="viewcode-block" id="generate_auth_headers"><a class="viewcode-back" href="../../spiral.html#spiral.utils.generate_auth_headers">[docs]</a><span class="k">def</span> <span class="nf">generate_auth_headers</span><span class="p">(</span><span class="n">email</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">EMAIL_HEADER</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span>
+        <span class="n">API_KEY_HEADER</span><span class="p">:</span> <span class="n">api_key</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="generate_uuid"><a class="viewcode-back" href="../../spiral.html#spiral.utils.generate_uuid">[docs]</a><span class="k">def</span> <span class="nf">generate_uuid</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="raise_errors"><a class="viewcode-back" href="../../spiral.html#spiral.utils.raise_errors">[docs]</a><span class="k">def</span> <span class="nf">raise_errors</span><span class="p">(</span><span class="n">response</span><span class="p">:</span> <span class="n">requests</span><span class="o">.</span><span class="n">Response</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_extract_err_msg</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">resp_json</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="k">if</span> <span class="s2">&quot;error&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">resp_json</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;No &#39;error&#39; field on response: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">resp_json</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">resp_json</span><span class="p">[</span><span class="s2">&quot;error&quot;</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">400</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidRequestError</span><span class="p">(</span><span class="n">_extract_err_msg</span><span class="p">())</span>
+    <span class="k">elif</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">422</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">UnprocessableEntityError</span><span class="p">(</span><span class="n">_extract_err_msg</span><span class="p">())</span>
+    <span class="k">elif</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">500</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InternalServerError</span><span class="p">(</span><span class="n">_extract_err_msg</span><span class="p">())</span>
+    <span class="k">elif</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">404</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ResourceNotFoundError</span><span class="p">(</span><span class="n">_extract_err_msg</span><span class="p">())</span>
+    <span class="k">elif</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">SpiralError</span><span class="p">(</span><span class="n">_extract_err_msg</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="schedule_from_cron_string"><a class="viewcode-back" href="../../spiral.html#spiral.utils.schedule_from_cron_string">[docs]</a><span class="k">def</span> <span class="nf">schedule_from_cron_string</span><span class="p">(</span><span class="n">schedule_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Schedule</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">schedule_str</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Schedule</span><span class="p">(</span><span class="n">trigger</span><span class="o">=</span><span class="n">TriggerType</span><span class="o">.</span><span class="n">MANUAL</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">croniter</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">schedule_str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">InvalidCronStringException</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> is not a valid cron string!&quot;</span> <span class="o">%</span> <span class="n">schedule_str</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Schedule</span><span class="p">(</span><span class="n">trigger</span><span class="o">=</span><span class="n">TriggerType</span><span class="o">.</span><span class="n">PERIODIC</span><span class="p">,</span> <span class="n">cron_schedule</span><span class="o">=</span><span class="n">schedule_str</span><span class="p">)</span></div>
+
+
+<span class="c1"># Helpers for creating model zip file</span>
+
+<span class="c1"># TODO: eng-406-remove-reliance-on-creating-a-modelpy</span>
+<span class="n">MODEL_FILE_NAME</span> <span class="o">=</span> <span class="s2">&quot;model.py&quot;</span>
+<span class="n">MODEL_PICKLE_FILE_NAME</span> <span class="o">=</span> <span class="s2">&quot;model.pkl&quot;</span>
+<span class="n">SPIRAL_UTILS_FILE_NAME</span> <span class="o">=</span> <span class="s2">&quot;spiral_utils.py&quot;</span>
+<span class="n">PYTHON_VERSION_FILE_NAME</span> <span class="o">=</span> <span class="s2">&quot;python_version.txt&quot;</span>
+<span class="n">CONDA_VERSION_FILE_NAME</span> <span class="o">=</span> <span class="s2">&quot;conda_version.txt&quot;</span>
+<span class="n">RESERVED_FILE_NAMES</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">MODEL_FILE_NAME</span><span class="p">,</span>
+    <span class="n">MODEL_PICKLE_FILE_NAME</span><span class="p">,</span>
+    <span class="n">SPIRAL_UTILS_FILE_NAME</span><span class="p">,</span>
+    <span class="n">PYTHON_VERSION_FILE_NAME</span><span class="p">,</span>
+    <span class="n">CONDA_VERSION_FILE_NAME</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">REQUIREMENTS_FILE</span> <span class="o">=</span> <span class="s2">&quot;requirements.txt&quot;</span>
+<span class="n">BLACKLISTED_REQUIREMENTS</span> <span class="o">=</span> <span class="s2">&quot;spiral&quot;</span>
+<span class="n">UserFunction</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span>
+<span class="n">ValidationTestFunction</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]</span>
+<span class="n">ValidationTestDecoratorFunction</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span>
+<span class="n">DecoratedValidationTestFunction</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[</span>
+    <span class="p">[</span><span class="n">ValidationTestFunction</span><span class="p">],</span> <span class="n">ValidationTestDecoratorFunction</span>
+<span class="p">]</span>
+<span class="n">MetricFunction</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="delete_zip_folder_and_file"><a class="viewcode-back" href="../../spiral.html#spiral.utils.delete_zip_folder_and_file">[docs]</a><span class="k">def</span> <span class="nf">delete_zip_folder_and_file</span><span class="p">(</span><span class="n">dir_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">name_path</span> <span class="o">=</span> <span class="s2">&quot;./&quot;</span> <span class="o">+</span> <span class="n">dir_name</span>
+    <span class="n">zip_file_path</span> <span class="o">=</span> <span class="n">name_path</span> <span class="o">+</span> <span class="s2">&quot;.zip&quot;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">zip_file_path</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">zip_file_path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">dir_name</span><span class="p">):</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">dir_name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="create_zip_file"><a class="viewcode-back" href="../../spiral.html#spiral.utils.create_zip_file">[docs]</a><span class="k">def</span> <span class="nf">create_zip_file</span><span class="p">(</span>
+    <span class="n">func</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">UserFunction</span><span class="p">,</span> <span class="n">ValidationTestFunction</span><span class="p">],</span>
+    <span class="n">dir_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">file_dependencies</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Takes a UserFunction or a Validation function and packages it into a zip file structure expected by the backend.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        func:</span>
+<span class="sd">            UserFunction or ValidationFunction to package</span>
+<span class="sd">        file_dependencies:</span>
+<span class="sd">            List of file dependencies the function uses</span>
+<span class="sd">        dir_path:</span>
+<span class="sd">            Name to use for function zip file and directory</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        filepath of zip file in string format</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">dir_path</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">dir_path</span><span class="p">)</span>
+
+        <span class="n">func_filepath</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getsourcefile</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">func_filepath</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Unable to find source file of function.&quot;</span><span class="p">)</span>
+        <span class="c1"># In Python3.8, `inspect.getsourcefile` only returns the file&#39;s relative path,</span>
+        <span class="c1"># so we need the line below to get the absolute path.</span>
+        <span class="n">func_filepath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">func_filepath</span><span class="p">)</span>
+
+        <span class="n">_package_files_and_requirements</span><span class="p">(</span>
+            <span class="n">func_filepath</span><span class="p">,</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="n">dir_path</span><span class="p">),</span>
+            <span class="n">file_dependencies</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="n">MODEL_FILE_NAME</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">model_file</span><span class="p">:</span>
+            <span class="n">model_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">op_file_content</span><span class="p">())</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="n">MODEL_PICKLE_FILE_NAME</span><span class="p">),</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">cp</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+
+        <span class="n">name_path</span> <span class="o">=</span> <span class="s2">&quot;./&quot;</span> <span class="o">+</span> <span class="n">dir_path</span>
+        <span class="n">zip_file_path</span> <span class="o">=</span> <span class="n">name_path</span> <span class="o">+</span> <span class="s2">&quot;.zip&quot;</span>
+        <span class="n">_make_archive</span><span class="p">(</span><span class="n">name_path</span><span class="p">,</span> <span class="n">zip_file_path</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">zip_file_path</span>
+
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">dir_path</span><span class="p">):</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">dir_path</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_package_files_and_requirements</span><span class="p">(</span>
+    <span class="n">func_filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dir_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">file_dependencies</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates the temporary directory for the function with all file dependencies and</span>
+<span class="sd">    requirements.txt.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        func_filepath:</span>
+<span class="sd">            Absolute path of file where the function is defined</span>
+<span class="sd">        dir_path:</span>
+<span class="sd">             Absolute path of directory to create.</span>
+<span class="sd">        file_dependencies:</span>
+<span class="sd">            Paths of file dependencies the function uses. Note that the paths are relative to the</span>
+<span class="sd">            file the function is defined in.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">file_dependencies</span><span class="p">:</span>
+        <span class="n">file_dependencies</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="s2">&quot;JPY_PARENT_PID&quot;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+        <span class="n">func_filepath</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ipynbname</span><span class="o">.</span><span class="n">path</span><span class="p">())</span>
+
+    <span class="n">current_directory_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+    <span class="n">func_dirpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">func_filepath</span><span class="p">)</span>
+    <span class="n">func_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">func_filepath</span><span class="p">)</span>
+
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">func_dirpath</span><span class="p">)</span>
+
+    <span class="n">file_dependencies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">func_file</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">file_index</span><span class="p">,</span> <span class="n">file_path</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">file_dependencies</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">file_path</span> <span class="ow">in</span> <span class="n">RESERVED_FILE_NAMES</span><span class="p">:</span>
+            <span class="c1"># TODO (ENG-406): If the file the function is defined in is a model.py don&#39;t throw</span>
+            <span class="c1"># error since we will remove this file from the directory before loading the</span>
+            <span class="c1"># spiral templated model.py file.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">file_index</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">file_dependencies</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ReservedFileNameException</span><span class="p">(</span>
+                    <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> is a reserved file name in our system. Please rename your file. &quot;</span>
+                    <span class="o">%</span> <span class="n">file_path</span>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">InvalidFunctionException</span><span class="p">(</span><span class="s2">&quot;File </span><span class="si">%s</span><span class="s2"> does not exist&quot;</span> <span class="o">%</span> <span class="n">file_path</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()):</span>
+            <span class="k">raise</span> <span class="n">InvalidDependencyFilePath</span><span class="p">(</span>
+                <span class="s2">&quot;File </span><span class="si">%s</span><span class="s2"> cannot be outside of the directory containing the function&quot;</span> <span class="o">%</span> <span class="n">file_path</span>
+            <span class="p">)</span>
+
+        <span class="n">dstfolder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="n">file_path</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">dstfolder</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">dstfolder</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="n">file_path</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">REQUIREMENTS_FILE</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s2">&quot;requirements.txt file detected in current directory </span><span class="si">%s</span><span class="s2">, will not infer package dependencies.&quot;</span>
+            <span class="o">%</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">REQUIREMENTS_FILE</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="n">REQUIREMENTS_FILE</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No requirements.txt file detected, inferring package dependencies.&quot;</span><span class="p">)</span>
+        <span class="n">_infer_requirements</span><span class="p">(</span><span class="n">dir_path</span><span class="p">)</span>
+
+    <span class="c1"># Figure out the python version</span>
+    <span class="n">python_version</span> <span class="o">=</span> <span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[:</span><span class="mi">2</span><span class="p">]))</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="n">PYTHON_VERSION_FILE_NAME</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">python_version</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="n">func_file</span><span class="p">)):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="n">func_file</span><span class="p">))</span>
+
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">current_directory_path</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_infer_requirements</span><span class="p">(</span><span class="n">dir_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Infers requirements in the current directory and writes it to a requirements.txt.</span>
+<span class="sd">    Assumes that no requirements exist.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        dir_path:</span>
+<span class="sd">            Absolute path of directory to infer requirements from.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">REQUIREMENTS_FILE</span><span class="p">)</span>
+    <span class="n">process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+        <span class="s2">&quot;pipreqsnb </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">dir_path</span><span class="p">,</span>
+        <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+        <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">req_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="n">REQUIREMENTS_FILE</span><span class="p">)</span>
+    <span class="n">stdout_raw</span><span class="p">,</span> <span class="n">stderr_raw</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+    <span class="n">stdout</span> <span class="o">=</span> <span class="n">stdout_raw</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+    <span class="n">stderr</span> <span class="o">=</span> <span class="n">stderr_raw</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">stdout</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">stdout</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">stderr</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">returncode</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Unable to infer requirements.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Blacklist requirements we don&#39;t want to infer</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">req_file_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">req_file_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+            <span class="c1"># TODO(ENG-531): use the --mode flag with pipreqsnb instead</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;==&quot;</span><span class="p">,</span> <span class="s2">&quot;&gt;=&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">BLACKLISTED_REQUIREMENTS</span><span class="p">):</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_make_archive</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">destination</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Creates zip file from source directory to destination file.&quot;&quot;&quot;</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">destination</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">base</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="nb">format</span> <span class="o">=</span> <span class="n">base</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">archive_from</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="n">archive_to</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">))</span>
+    <span class="n">shutil</span><span class="o">.</span><span class="n">make_archive</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">format</span><span class="p">,</span> <span class="n">archive_from</span><span class="p">,</span> <span class="n">archive_to</span><span class="p">)</span>
+    <span class="n">shutil</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">format</span><span class="p">),</span> <span class="n">destination</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="artifact_name_from_op_name"><a class="viewcode-back" href="../../spiral.html#spiral.utils.artifact_name_from_op_name">[docs]</a><span class="k">def</span> <span class="nf">artifact_name_from_op_name</span><span class="p">(</span><span class="n">op_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">op_name</span> <span class="o">+</span> <span class="s2">&quot; artifact&quot;</span></div>
+
+
+<div class="viewcode-block" id="generate_extract_op_name"><a class="viewcode-back" href="../../spiral.html#spiral.utils.generate_extract_op_name">[docs]</a><span class="k">def</span> <span class="nf">generate_extract_op_name</span><span class="p">(</span>
+    <span class="n">dag</span><span class="p">:</span> <span class="n">DAG</span><span class="p">,</span>
+    <span class="n">integration_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates name for extract operators to avoid operators with the same name.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        dag:</span>
+<span class="sd">            DAG that operator will be a part of.</span>
+<span class="sd">        integration_name:</span>
+<span class="sd">            Name of integration to run extract on.</span>
+<span class="sd">        name:</span>
+<span class="sd">            Optinally provided operator name.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        Name for extract operator.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">op_name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="n">default_op_prefix</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> query&quot;</span> <span class="o">%</span> <span class="n">integration_name</span>
+    <span class="n">default_op_index</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">while</span> <span class="n">op_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">candidate_op_name</span> <span class="o">=</span> <span class="n">default_op_prefix</span> <span class="o">+</span> <span class="s2">&quot; </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">default_op_index</span>
+        <span class="n">colliding_op</span> <span class="o">=</span> <span class="n">dag</span><span class="o">.</span><span class="n">get_operator</span><span class="p">(</span><span class="n">with_name</span><span class="o">=</span><span class="n">candidate_op_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">colliding_op</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">op_name</span> <span class="o">=</span> <span class="n">candidate_op_name</span>  <span class="c1"># break out of the loop!</span>
+        <span class="n">default_op_index</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">assert</span> <span class="n">op_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">op_name</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, aqueduct-dev.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
